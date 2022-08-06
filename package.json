@@ -1,0 +1,22 @@
+{
+  "name": "eb-app-data",
+  "version": "0.1.0",
+  "author": "me@jerahmeelcosinas.net",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sanisoclem/eb-app-data.git"
+  },
+  "private": true,
+  "scripts": {
+    "postinstall": "spago install",
+    "clean": "rm -rf node_modules output .spago dist/*.js *.lock .cache",
+    "build": "spago build",
+    "test": "spago test"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^3.14.1",
+    "purescript": "^0.15.4",
+    "spago": "^0.20.9"
+  }
+}

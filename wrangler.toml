@@ -1,0 +1,11 @@
+name = "eb-app-data"
+workers_dev = true
+main = "./durable_objects/index.js"
+compatibility_date = "2022-07-04"
+
+[durable_objects]
+bindings = [{name = "EB_LEDGER_DO", class_name = "Ledger"}]
+
+[[migrations]]
+tag = "v1" # Should be unique for each entry
+new_classes = ["Ledger"]
