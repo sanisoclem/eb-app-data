@@ -3,7 +3,8 @@ module Data.Request
   )
   where
 
-data RequestMethod = GET
+data RequestMethod
+  = GET
   | POST
   | DELETE
   | PUT

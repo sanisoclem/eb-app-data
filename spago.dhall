@@ -15,13 +15,14 @@ to generate this file without the comments in this block.
   [ "aff"
   , "argonaut"
   , "argonaut-codecs"
+  , "argonaut-generic"
+  , "bifunctors"
   , "console"
   , "effect"
+  , "either"
   , "prelude"
   , "safe-coerce"
   , "transformers"
-  , "bifunctors"
-  , "either"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]

@@ -15,7 +15,7 @@ import Safe.Coerce (coerce)
 newtype AppM a = AppM (ReaderT ContextData (ExceptT String Aff) a)
 
 runAppM :: forall a. ContextData -> AppM a -> Aff (Either String a)
-runAppM x y = runExceptT $ runReaderT (coerce y) x
+runAppM state = runExceptT <<< (flip runReaderT) state <<< coerce
 
 derive newtype instance functorAppM :: Functor AppM
 derive newtype instance applyAppM :: Apply AppM
