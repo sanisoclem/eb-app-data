@@ -11,7 +11,18 @@ When creating a new Spago project, you can use
 to generate this file without the comments in this block.
 -}
 { name = "eb-app-data"
-, dependencies = [ "console", "effect", "prelude", "aff", "transformers", "safe-coerce" ]
+, dependencies =
+  [ "aff"
+  , "argonaut"
+  , "argonaut-codecs"
+  , "console"
+  , "effect"
+  , "prelude"
+  , "safe-coerce"
+  , "transformers"
+  , "bifunctors"
+  , "either"
+  ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
 }
