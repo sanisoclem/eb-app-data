@@ -44,6 +44,6 @@ doRequestGetBody = doRequestGetBodyImpl >>> toAffE
 -- private
 foreign import doRequestGetBodyImpl :: DurableObjectRequest -> Effect (Promise String)
 foreign import doRequestGetMethodImpl :: DurableObjectRequest -> String
-foreign import doGetStateImpl :: (forall a. a -> Maybe a) -> (forall a. Maybe a) -> DurableObjectState -> String -> Effect (Promise (Maybe Json))
+foreign import doGetStateImpl :: (∀ a. a -> Maybe a) -> (∀ a. Maybe a) -> DurableObjectState -> String -> Effect (Promise (Maybe Json))
 foreign import doPutStateImpl :: DurableObjectState -> String -> Json -> Effect (Promise Unit)
 

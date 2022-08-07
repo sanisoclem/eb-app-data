@@ -9,7 +9,7 @@ import Safe.Coerce (coerce)
 
 newtype TestM a = TestM (Aff a)
 
-runTestM :: forall a. TestM a -> Aff a
+runTestM :: ∀ a. TestM a -> Aff a
 runTestM = coerce
 
 derive newtype instance functorTestM :: Functor TestM

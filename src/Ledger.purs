@@ -18,7 +18,7 @@ import FFI.DurableObject (DurableObjectRequest, DurableObjectResponse, DurableOb
 fetchMain :: DurableObjectState -> DurableObjectRequest -> Effect (Promise DurableObjectResponse)
 fetchMain state req = fromAff $ runAppM (mkContext state req) handler
 
-handler :: forall m. (IncomingRequest m) => (DurableStorage m) => (MonadError Error m) => m DurableObjectResponse
+handler :: ∀ m. (IncomingRequest m) => (DurableStorage m) => (MonadError Error m) => m DurableObjectResponse
 handler = catchError go errorResponse
   where
     go = do
@@ -28,12 +28,12 @@ handler = catchError go errorResponse
         GET -> handlerGet
         _ -> notFoundResponse "Not found"
 
-handlerPost :: forall m. (DurableStorage m) => LedgerRequest -> m DurableObjectResponse
+handlerPost :: ∀ m. (DurableStorage m) => LedgerRequest -> m DurableObjectResponse
 handlerPost (UpdateLedger x) = stringResponse "OK"
 handlerPost GetLedger = do
   ledger :: LedgerDocument <- getDoState "ledger"
   jsonResponse ledger
 
-handlerGet :: forall m. (Monad m) => m DurableObjectResponse
+handlerGet :: ∀ m. (Monad m) => m DurableObjectResponse
 handlerGet = do
   stringResponse "GetING"

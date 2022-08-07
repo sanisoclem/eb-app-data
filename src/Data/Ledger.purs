@@ -14,7 +14,6 @@ instance contractLedgerDocument :: DataContract LedgerDocumentContract LedgerDoc
   fromContract (LedgerDocumentContractV1 d) = LedgerDocument d
   toContract (LedgerDocument x) = LedgerDocumentContractV1 x
 
-
 data LedgerRequest
   = GetLedger
   | UpdateLedger

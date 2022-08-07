@@ -12,7 +12,7 @@ import Safe.Coerce (coerce)
 
 newtype AppM a = AppM (ReaderT ContextData Aff a)
 
-runAppM :: forall a. ContextData -> AppM a -> Aff a
+runAppM :: ∀ a. ContextData -> AppM a -> Aff a
 runAppM state = coerce >>> (flip runReaderT) state
 
 derive newtype instance functorAppM :: Functor AppM
