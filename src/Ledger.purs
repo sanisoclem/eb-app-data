@@ -3,12 +3,14 @@ module Ledger where
 import Prelude
 
 import AppM (runAppM)
-import Capability.DurableObject (class DurableObject, errorResponse, getBodyJson, getRequestMethod, notFoundResponse, stringResponse)
+import Capability.IncomingRequest (class IncomingRequest, getBodyJson, getRequestMethod)
+import Capability.Storage (class DurableStorage, getDoState)
 import Context (mkContext)
 import Control.Monad.Error.Class (class MonadError, catchError)
 import Control.Promise (Promise, fromAff)
-import Data.Ledger (LedgerRequest(..))
+import Data.Ledger (LedgerDocument(..), LedgerRequest(..))
 import Data.Request (RequestMethod(..))
+import Data.Response (errorResponse, jsonResponse, notFoundResponse, stringResponse)
 import Effect (Effect)
 import Effect.Exception (Error)
 import FFI.DurableObject (DurableObjectRequest, DurableObjectResponse, DurableObjectState)
@@ -16,7 +18,7 @@ import FFI.DurableObject (DurableObjectRequest, DurableObjectResponse, DurableOb
 fetchMain :: DurableObjectState -> DurableObjectRequest -> Effect (Promise DurableObjectResponse)
 fetchMain state req = fromAff $ runAppM (mkContext state req) handler
 
-handler :: forall m. (DurableObject m) => (MonadError Error m) => m DurableObjectResponse
+handler :: forall m. (IncomingRequest m) => (DurableStorage m) => (MonadError Error m) => m DurableObjectResponse
 handler = catchError go errorResponse
   where
     go = do
@@ -26,10 +28,12 @@ handler = catchError go errorResponse
         GET -> handlerGet
         _ -> notFoundResponse "Not found"
 
-handlerPost :: forall m. (DurableObject m) => LedgerRequest -> m DurableObjectResponse
+handlerPost :: forall m. (DurableStorage m) => LedgerRequest -> m DurableObjectResponse
 handlerPost (UpdateLedger x) = stringResponse "OK"
-handlerPost GetLedger = stringResponse "OK"
+handlerPost GetLedger = do
+  ledger :: LedgerDocument <- getDoState "ledger"
+  jsonResponse ledger
 
-handlerGet :: forall m. (DurableObject m) => m DurableObjectResponse
+handlerGet :: forall m. (Monad m) => m DurableObjectResponse
 handlerGet = do
   stringResponse "GetING"

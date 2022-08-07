@@ -1,14 +1,23 @@
 module Context where
 
+import Capability.Has
+
 import FFI.DurableObject (DurableObjectRequest, DurableObjectState)
 
-type ContextData =
+data ContextData = ContextData
   { durableObjectRequest :: DurableObjectRequest
   , durableObjectState :: DurableObjectState
   }
 
 mkContext :: DurableObjectState -> DurableObjectRequest -> ContextData
 mkContext durableObjectState durableObjectRequest =
-  { durableObjectRequest
-  , durableObjectState
-  }
+  ContextData
+    { durableObjectRequest
+    , durableObjectState
+    }
+
+instance hasContextState :: Has ContextData DurableObjectState where
+  getter (ContextData x) = x.durableObjectState
+
+instance hasContextRequest :: Has ContextData DurableObjectRequest where
+  getter (ContextData x) = x.durableObjectRequest
