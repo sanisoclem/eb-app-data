@@ -7,7 +7,7 @@ import Capability.DurableObject (class DurableObject, errorResponse, getBodyJson
 import Context (mkContext)
 import Control.Monad.Error.Class (class MonadError, catchError)
 import Control.Promise (Promise, fromAff)
-import Data.Ledger (LedgerEvent(..))
+import Data.Ledger (LedgerRequest(..))
 import Data.Request (RequestMethod(..))
 import Effect (Effect)
 import Effect.Exception (Error)
@@ -26,9 +26,9 @@ handler = catchError go errorResponse
         GET -> handlerGet
         _ -> notFoundResponse "Not found"
 
-handlerPost :: forall m. (DurableObject m) => LedgerEvent -> m DurableObjectResponse
+handlerPost :: forall m. (DurableObject m) => LedgerRequest -> m DurableObjectResponse
 handlerPost (UpdateLedger x) = stringResponse "OK"
-handlerPost (CreateAccount x) = stringResponse "OK"
+handlerPost GetLedger = stringResponse "OK"
 
 handlerGet :: forall m. (DurableObject m) => m DurableObjectResponse
 handlerGet = do

@@ -14,6 +14,7 @@ module Capability.DurableObject
 
 import Prelude
 
+import Capability.DataContract (class DataContract, decodeContractJson)
 import Context (ContextData)
 import Control.Monad.Error.Class (class MonadThrow, liftEither)
 import Control.Monad.Reader (class MonadAsk, asks)
@@ -30,9 +31,10 @@ import FFI.DurableObject (DurableObjectResponse, doGetState, doRequestGetBody, d
 class Monad m <= DurableObject m where
   getRequestMethod :: m RequestMethod
   getBodyString :: m String
-  getBodyJson :: forall a. (DecodeJson a) => m a
-  tryGetDoState :: forall a. (DecodeJson a) => String -> m (Maybe a)
-  getDoState :: forall a. (DecodeJson a) => String -> m a
+  getBodyJson :: forall a b. (DecodeJson a) => (DataContract a b) => m b
+
+  tryGetDoState :: forall a b. (DecodeJson a) => (DataContract a b) => String -> m (Maybe b)
+  getDoState :: forall a b. (DecodeJson a) => (DataContract a b) => String -> m b
 
   -- responses
   stringResponse :: String -> m DurableObjectResponse
@@ -50,12 +52,11 @@ instance durableObjectState :: (MonadAsk ContextData m, MonadAff m, MonadThrow E
   getBodyJson = do
     body <- getBodyString
     parsed <- liftEither $ lmap error $ jsonParser body
-    liftEither $ lmap (error <<< printJsonDecodeError) $ decodeJson parsed
+    liftEither $ lmap (error <<< printJsonDecodeError) $ decodeContractJson parsed
   tryGetDoState key = do
     state <- asks _.durableObjectState
     val <- liftAff $ doGetState state key
-    sequence $ liftEither <$> lmap (error <<< printJsonDecodeError) <$> decodeJson <$> val
-  --getDoState = tryGetDoState >=> note "state not found" >>> liftEither
+    sequence $ liftEither <$> lmap (error <<< printJsonDecodeError) <$> decodeContractJson <$> val
   getDoState key = tryGetDoState key >>= note (error $ "state not found: " <> key) >>> liftEither
 
   stringResponse resp =
