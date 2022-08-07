@@ -5,24 +5,25 @@ module FFI.DurableObject
   , doRequestGetMethod
   , doStringResponse
   , doRequestGetBody
-  , doErrorResponse
-  , doNotFoundResponse
   , doGetState
+  , doPutState
   )
   where
 
+import Prelude
+
+import Control.Promise (Promise, toAffE)
 import Data.Argonaut (Json)
-import Data.Maybe (Maybe (..))
+import Data.Maybe (Maybe(..))
 import Data.Request (RequestMethod(..))
+import Effect (Effect)
 import Effect.Aff (Aff)
 
 foreign import data DurableObjectRequest :: Type
 foreign import data DurableObjectState :: Type
 foreign import data DurableObjectResponse :: Type
 
-foreign import doStringResponse :: String -> DurableObjectResponse
-foreign import doErrorResponse :: String -> DurableObjectResponse
-foreign import doNotFoundResponse :: String -> DurableObjectResponse
+foreign import doStringResponse :: String -> Int -> DurableObjectResponse
 
 doRequestGetMethod :: DurableObjectRequest -> RequestMethod
 doRequestGetMethod req = case doRequestGetMethodImpl req of
@@ -32,11 +33,17 @@ doRequestGetMethod req = case doRequestGetMethodImpl req of
   "PUT" -> PUT
   x -> Unknown x
 doGetState :: DurableObjectState -> String -> Aff (Maybe Json)
-doGetState = doGetStateImpl Just Nothing
+doGetState state = doGetStateImpl Just Nothing state >>> toAffE
 
-foreign import doRequestGetBody :: DurableObjectRequest -> Aff String
+doPutState :: DurableObjectState -> String -> Json -> Aff Unit
+doPutState state key = doPutStateImpl state key >>> toAffE
+
+doRequestGetBody :: DurableObjectRequest -> Aff String
+doRequestGetBody = doRequestGetBodyImpl >>> toAffE
 
 -- private
+foreign import doRequestGetBodyImpl :: DurableObjectRequest -> Effect (Promise String)
 foreign import doRequestGetMethodImpl :: DurableObjectRequest -> String
-foreign import doGetStateImpl :: (forall a. a -> Maybe a) -> (forall a. Maybe a) -> DurableObjectState -> String -> Aff (Maybe Json)
+foreign import doGetStateImpl :: (forall a. a -> Maybe a) -> (forall a. Maybe a) -> DurableObjectState -> String -> Effect (Promise (Maybe Json))
+foreign import doPutStateImpl :: DurableObjectState -> String -> Json -> Effect (Promise Unit)
 
