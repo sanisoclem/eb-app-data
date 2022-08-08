@@ -1,5 +1,5 @@
 
-import { fetchMain } from '../output/Ledger';
+import { ledgerFetchMain } from '../output/Main';
 
 export class Ledger {
   constructor(state) {
@@ -7,7 +7,7 @@ export class Ledger {
   }
 
   async fetch(request) {
-    await fetchMain(this.state)(request)();
+    await ledgerFetchMain(this.state)(request)();
   }
 }
 
