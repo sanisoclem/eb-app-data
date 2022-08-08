@@ -15,14 +15,32 @@ instance contractLedgerDocument :: DataContract LedgerDocumentContract LedgerDoc
   toContract (LedgerDocument x) = LedgerDocumentContractV1 x
 
 data LedgerRequest
+  = LedgerQuery LedgerQuery
+  | LedgerCommand LedgerCommand
+  | LedgerSubscription LedgerSubscription
+
+data LedgerCommand
+  = UpdateLedger
+  | CreateAccount
+  | UpdateAccount
+  | CloseAccount
+  | CreateTransaction
+  | UpdateTransaction
+  | DeleteTransaction
+
+data LedgerQuery
   = GetLedger
-  | UpdateLedger
-    { name :: String
-    , createdAt :: Instant
-    }
+  | GetAccounts
+  | GetTransactions
+
+data LedgerSubscription
+  = Subscribe
+  | Unsubscribe
+
 
 instance dataContractLedgerRequest :: DataContract LedgerRequestContract LedgerRequest where
+  toContract LedgerQuery = GetLedgerV1
+  toContract (UpdateLedger x) = UpdateLedgerV1 x
+
   fromContract GetLedgerV1 = GetLedger
   fromContract (UpdateLedgerV1 x) = UpdateLedger x
-  toContract GetLedger = GetLedgerV1
-  toContract (UpdateLedger x) = UpdateLedgerV1 x
