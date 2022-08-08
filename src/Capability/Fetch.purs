@@ -2,11 +2,11 @@ module Capability.IncomingRequest where
 
 import Prelude
 
-import Capability.DataContract (class DataContract, decodeContractJson)
+import Capability.DataContract (class DecodeDataContract, decodeContractJson)
 import Capability.Has (class Has, getter)
 import Control.Monad.Error.Class (class MonadThrow, liftEither)
 import Control.Monad.Reader (class MonadAsk, asks)
-import Data.Argonaut (jsonParser, printJsonDecodeError)
+import Data.Argonaut (jsonParser)
 import Data.Bifunctor (lmap)
 import Data.Request (RequestMethod)
 import Effect.Aff.Class (class MonadAff, liftAff)
@@ -16,7 +16,7 @@ import FFI.DurableObject (DurableObjectRequest, doRequestGetBody, doRequestGetMe
 class Monad m <= IncomingRequest m where
   getRequestMethod :: m RequestMethod
   getBodyString :: m String
-  getBodyJson :: ∀ a b. (DataContract a b) => m b
+  getBodyJson :: ∀ a b. (DecodeDataContract a b) => m b
 
 instance incomingRequestInstance :: (Has s DurableObjectRequest, MonadAsk s m, MonadAff m, MonadThrow Error m) => IncomingRequest m where
   getRequestMethod = do
@@ -28,4 +28,4 @@ instance incomingRequestInstance :: (Has s DurableObjectRequest, MonadAsk s m, M
   getBodyJson = do
     body <- getBodyString
     parsed <- liftEither <<< lmap error <<< jsonParser $ body
-    liftEither <<< lmap error <<< lmap printJsonDecodeError <<< decodeContractJson $ parsed
+    liftEither <<< decodeContractJson $ parsed

@@ -20,14 +20,17 @@ to generate this file without the comments in this block.
   , "bifunctors"
   , "console"
   , "datetime"
+  , "decimals"
   , "effect"
   , "either"
   , "exceptions"
   , "foldable-traversable"
   , "maybe"
+  , "parsing"
   , "prelude"
   , "safe-coerce"
   , "transformers"
+  , "uri"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]

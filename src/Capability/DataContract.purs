@@ -2,15 +2,20 @@ module Capability.DataContract where
 
 import Prelude
 
-import Data.Argonaut (class DecodeJson, class EncodeJson, Json, JsonDecodeError, decodeJson, encodeJson)
-import Data.Either (Either)
+import Data.Argonaut (class DecodeJson, class EncodeJson, Json, decodeJson, encodeJson, printJsonDecodeError)
+import Data.Bifunctor (lmap)
+import Data.Either (Either, note)
+import Data.Maybe (Maybe)
+import Effect.Exception (Error, error)
 
-class (DecodeJson vd, EncodeJson vd) <= DataContract vd d | d -> vd where
-  fromContract :: vd -> d
+class (DecodeJson vd) <= DecodeDataContract vd d | d -> vd where
+  fromContract :: vd -> Maybe d
+
+class (EncodeJson vd) <= EncodeDataContract vd d | d -> vd where
   toContract :: d -> vd
 
-decodeContractJson :: ∀ a b. (DataContract a b) => Json -> Either JsonDecodeError b
-decodeContractJson = map fromContract <<< decodeJson
+decodeContractJson :: ∀ a b. (DecodeDataContract a b) => Json -> Either Error b
+decodeContractJson = (note (error "Failed to convert from contract") <<< fromContract) <=< lmap error <<< lmap printJsonDecodeError <<< decodeJson
 
-encodeContractJson :: ∀ a b. (DataContract a b) => b -> Json
+encodeContractJson :: ∀ a b. (EncodeDataContract a b) => b -> Json
 encodeContractJson = encodeJson <<< toContract

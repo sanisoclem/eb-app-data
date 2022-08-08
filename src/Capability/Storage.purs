@@ -3,12 +3,10 @@ module Capability.Storage
 
 import Prelude
 
-import Capability.DataContract (class DataContract, decodeContractJson, encodeContractJson)
+import Capability.DataContract (class DecodeDataContract, class EncodeDataContract, decodeContractJson, encodeContractJson)
 import Capability.Has (class Has, getter)
 import Control.Monad.Error.Class (class MonadThrow, liftEither)
 import Control.Monad.Reader (class MonadAsk, asks)
-import Data.Argonaut (printJsonDecodeError)
-import Data.Bifunctor (lmap)
 import Data.Either (note)
 import Data.Maybe (Maybe)
 import Data.Traversable (sequence)
@@ -18,9 +16,9 @@ import FFI.DurableObject (DurableObjectState, doGetState, doPutState, doDeleteSt
 
 
 class Monad m <= DurableStorage m where
-  tryGetDoState :: ∀ a b. (DataContract a b) => String -> m (Maybe b)
-  getDoState :: ∀ a b. (DataContract a b) => String -> m b
-  putDoState :: ∀ a b. (DataContract a b) => String -> b -> m Unit
+  tryGetDoState :: ∀ a b. (DecodeDataContract a b) => String -> m (Maybe b)
+  getDoState :: ∀ a b. (DecodeDataContract a b) => String -> m b
+  putDoState :: ∀ a b. (EncodeDataContract a b) => String -> b -> m Unit
   deleteDoState :: String -> m Unit
 
   -- batchPutDoState :: ∀ a b. (DataContract a b) => String -> b -> m Unit
@@ -31,7 +29,7 @@ instance durableStorageInstance :: (Has s DurableObjectState, MonadAsk s m, Mona
   tryGetDoState key = do
     state <- asks getter
     val <- liftAff $ doGetState state key
-    sequence $ liftEither <<< lmap error <<< lmap printJsonDecodeError <<< decodeContractJson <$> val
+    sequence $ liftEither <<< decodeContractJson <$> val
   getDoState key = tryGetDoState key >>= note (error $ "state not found: " <> key) >>> liftEither
   putDoState key value = do
     state <- asks getter
