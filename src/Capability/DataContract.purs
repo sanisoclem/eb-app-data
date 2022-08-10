@@ -6,6 +6,8 @@ import Data.Argonaut (class DecodeJson, class EncodeJson, Json, decodeJson, enco
 import Data.Bifunctor (lmap)
 import Data.Either (Either, note)
 import Data.Maybe (Maybe)
+import Data.UUID (genUUID, toString)
+import Effect.Class (class MonadEffect, liftEffect)
 import Effect.Exception (Error, error)
 
 class (DecodeJson vd) <= DecodeDataContract vd d | d -> vd where
@@ -19,3 +21,15 @@ decodeContractJson = (note (error "Failed to convert from contract") <<< fromCon
 
 encodeContractJson :: ∀ a b. (EncodeDataContract a b) => b -> Json
 encodeContractJson = encodeJson <<< toContract
+
+class DocumentId i where
+  toDocumentId :: i -> String
+  fromDocumentId :: String -> Maybe i
+
+class RandomId i where
+  generate :: String -> i
+
+generateId :: ∀ m a. (RandomId a) => (MonadEffect m) => m a
+generateId = do
+  uuid <- toString <$> liftEffect genUUID
+  pure $ generate uuid

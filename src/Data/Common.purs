@@ -2,6 +2,7 @@ module Data.Common where
 
 import Prelude
 
+import Capability.DataContract (class DocumentId, class RandomId)
 import Data.Argonaut (class EncodeJson)
 import Data.Argonaut.Decode.Class (class DecodeJson)
 import Data.Argonaut.Decode.Decoders (decodeInt)
@@ -9,6 +10,8 @@ import Data.Argonaut.Decode.Generic (genericDecodeJson)
 import Data.Argonaut.Encode.Encoders (encodeInt)
 import Data.Argonaut.Encode.Generic (genericEncodeJson)
 import Data.Generic.Rep (class Generic)
+import Data.String (Pattern(..), stripPrefix)
+import Safe.Coerce (coerce)
 
 -- types that we don't need to version
 -- rules:
@@ -52,6 +55,12 @@ instance encodeJsonDenomination :: EncodeJson Denomination where
 newtype AccountId = AccountId String
 derive newtype instance decodeJsonAccountId :: DecodeJson AccountId
 derive newtype instance encodeJsonAccountId :: EncodeJson AccountId
+instance documentIdAccountId :: DocumentId AccountId where
+  fromDocumentId = coerce <<< stripPrefix (Pattern "account/")
+  toDocumentId = (<>) "account/" <<< coerce
+instance randomIdAccountId :: RandomId AccountId where
+  generate = AccountId
+
 newtype TransactionId = TransactionId String
 derive newtype instance decodeJsonTransactionId :: DecodeJson TransactionId
 derive newtype instance encodeJsonTransactionId :: EncodeJson TransactionId

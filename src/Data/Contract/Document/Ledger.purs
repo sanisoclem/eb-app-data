@@ -7,7 +7,7 @@ import Data.Argonaut.Encode.Generic (genericEncodeJson)
 import Data.Common (Instant)
 import Data.Generic.Rep (class Generic)
 
-data LedgerDocumentContract
+newtype LedgerDocumentContract
   = LedgerDocumentContractV1
     { name :: String
     , createdAt :: Instant

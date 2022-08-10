@@ -17,6 +17,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^3.14.1",
     "purescript": "^0.15.4",
-    "spago": "^0.20.9"
+    "spago": "^0.20.9",
+    "uuid": "^8.3.2"
   }
 }
