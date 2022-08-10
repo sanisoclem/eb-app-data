@@ -1,23 +1,12 @@
-module DataContract.Ledger where
+module Data.Contract.Interface.Ledger where
 
 import Data.Argonaut.Decode.Class (class DecodeJson)
 import Data.Argonaut.Decode.Generic (genericDecodeJson)
 import Data.Argonaut.Encode.Class (class EncodeJson)
 import Data.Argonaut.Encode.Generic (genericEncodeJson)
-import Data.Common (AccountId, AccountType, Denomination, Instant, SubscriptionId, TransactionId)
+import Data.Common (AccountId, AccountType, Denomination, SubscriptionId, TransactionId)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
-
-data LedgerDocumentContract
-  = LedgerDocumentContractV1
-    { name :: String
-    , createdAt :: Instant
-    }
-derive instance ledgerDocumentGeneric :: Generic LedgerDocumentContract _
-instance ledgerDocumentEncodeJson :: EncodeJson LedgerDocumentContract where
-  encodeJson a = genericEncodeJson a
-instance ledgerDocumentDecodeJson :: DecodeJson LedgerDocumentContract where
-  decodeJson a = genericDecodeJson a
 
 data LedgerRequestContract
   = UpdateLedgerV1

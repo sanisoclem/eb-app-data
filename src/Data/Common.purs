@@ -58,3 +58,7 @@ derive newtype instance encodeJsonTransactionId :: EncodeJson TransactionId
 newtype SubscriptionId = SubscriptionId String
 derive newtype instance decodeJsonSubscriptionId :: DecodeJson SubscriptionId
 derive newtype instance encodeJsonSubscriptionId :: EncodeJson SubscriptionId
+
+newtype VersionNumber = VersionNumber Int
+derive newtype instance decodeJsonVersionNumber :: DecodeJson VersionNumber
+derive newtype instance encodeJsonVersionNumber :: EncodeJson VersionNumber

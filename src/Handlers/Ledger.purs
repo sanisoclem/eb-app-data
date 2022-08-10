@@ -6,9 +6,10 @@ module Handlers.Ledger
 import Prelude
 
 import Capability.IncomingRequest (class IncomingRequest, getBodyJson, getRequestMethod)
-import Capability.Storage (class DurableStorage, getDoState)
+import Capability.Storage (class DurableStorage, getDoState, putDoState)
 import Control.Monad.Error.Class (class MonadError, catchError)
-import Data.Ledger (LedgerCommand, LedgerDocument, LedgerQuery(..), LedgerRequest(..), LedgerSubscription)
+import Data.Document.Ledger (LedgerDocument(..), getLedger, putLedger)
+import Data.Interface.Ledger (LedgerCommand(..), LedgerQuery(..), LedgerRequest(..), LedgerSubscription)
 import Data.Request (RequestMethod(..))
 import Data.Response (errorResponse, jsonResponse, notFoundResponse, stringResponse)
 import Effect.Exception (Error)
@@ -23,14 +24,18 @@ handleLedgerRequest = catchError go errorResponse
         POST -> getBodyJson >>= handleRequest
         _ -> notFoundResponse "Not found"
 
-handleRequest :: ∀ m. (DurableStorage m) => LedgerRequest -> m DurableObjectResponse
+handleRequest :: ∀ m. DurableStorage m => LedgerRequest -> m DurableObjectResponse
 handleRequest = case _ of
   LedgerCommand x -> handleCommand x
   LedgerQuery x -> handleQuery x
   LedgerSubscription x -> handleSubscription x
 
-handleCommand ∷ ∀ m. Applicative m ⇒ LedgerCommand → m DurableObjectResponse
+handleCommand ∷ ∀ m. DurableStorage m ⇒ LedgerCommand → m DurableObjectResponse
 handleCommand = case _ of
+  UpdateLedger x -> do
+    ledger <- getLedger
+    putLedger ledger { name = x.name }
+    stringResponse "OK" -- TODO: return events
   _ -> stringResponse "OK"
 
 handleQuery ∷ ∀ m. DurableStorage m ⇒ LedgerQuery → m DurableObjectResponse

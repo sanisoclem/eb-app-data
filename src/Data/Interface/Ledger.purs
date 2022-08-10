@@ -1,21 +1,11 @@
-module Data.Ledger where
+module Data.Interface.Ledger where
 
 import Prelude
 
-import Capability.DataContract (class DecodeDataContract, class EncodeDataContract, fromContract)
-import Data.Common (AccountId, AccountType, Denomination, Instant, SubscriptionId, TransactionId)
+import Capability.DataContract (class DecodeDataContract, class EncodeDataContract)
+import Data.Common (AccountId, AccountType, Denomination, SubscriptionId, TransactionId)
 import Data.Maybe (Maybe)
-import DataContract.Ledger (LedgerDocumentContract(..), LedgerRequestContract(..))
-
-data LedgerDocument = LedgerDocument
-  { name :: String
-  , createdAt :: Instant
-  }
-
-instance encodeDataContractLedgerDocument :: EncodeDataContract LedgerDocumentContract LedgerDocument where
-  toContract (LedgerDocument x) = LedgerDocumentContractV1 x
-instance decodeDataContractLedgerDocument :: DecodeDataContract LedgerDocumentContract LedgerDocument where
-  fromContract (LedgerDocumentContractV1 d) = pure $ LedgerDocument d
+import Data.Contract.Interface.Ledger (LedgerRequestContract(..))
 
 data LedgerRequest
   = LedgerQuery LedgerQuery
@@ -50,6 +40,7 @@ data LedgerCommand
     , notes :: String
     }
   | DeleteTransaction TransactionId
+
 data LedgerQuery
   = GetLedger
   | GetTransactions
