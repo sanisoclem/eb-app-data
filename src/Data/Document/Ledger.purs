@@ -50,6 +50,7 @@ newtype AccountDocument = AccountDocument
   , accountType :: AccountType
   , denomination :: Denomination
   , balance :: Int
+  , closed :: Boolean
   }
 derive instance genericAccountDocument :: Generic AccountDocument _
 instance encodeJsonAccountDocument :: EncodeJson AccountDocument where
