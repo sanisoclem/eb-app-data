@@ -2,8 +2,7 @@ module Main where
 
 import Prelude
 
-import AppM (runAppM)
-import Context (mkContext)
+import AppM (runAppM, mkContext)
 import Control.Promise (Promise, fromAff)
 import Effect (Effect)
 import FFI.DurableObject (DurableObjectRequest, DurableObjectResponse, DurableObjectState)
