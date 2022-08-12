@@ -10,8 +10,8 @@ import Control.Monad.Error.Class (class MonadError, class MonadThrow, liftEither
 import Control.Monad.State (StateT, runStateT, class MonadState, gets, modify_)
 import Data.Argonaut (Json)
 import Data.List (List(..), (:))
-import Data.Map (Map, delete, insert, lookup)
-import Data.Request (RequestMethod)
+import Data.Map (Map, delete, empty, insert, lookup)
+import Data.Request (RequestMethod(..))
 import Data.Traversable (sequence, sequence_)
 import Data.Tuple (fst)
 import Effect.Aff (Aff)
@@ -19,6 +19,7 @@ import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
 import Effect.Exception (Error)
 import Safe.Coerce (coerce)
+import Test.Spec (class Example)
 
 newtype TestM a = TestM (StateT TestData Aff a)
 
@@ -72,6 +73,14 @@ data TestData = TestData
   , data :: Map String Json
   , batchPuts :: List BatchedPut
   , batchDeletes :: List String
+  }
+mkTestData ∷ String -> Map String Json -> TestData
+mkTestData body d = TestData
+  { requestMethod: POST
+  , requestBody: body
+  , data: d
+  , batchPuts: Nil
+  , batchDeletes: Nil
   }
 
 instance hasContextMethod :: Has TestData RequestMethod where

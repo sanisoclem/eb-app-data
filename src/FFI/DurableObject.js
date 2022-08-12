@@ -1,3 +1,4 @@
+
 // exported directly
 export const doStringResponse = (resp) => (status) => new Response(resp, { status })
 

@@ -3,18 +3,34 @@ module Data.Response where
 import Prelude
 
 import Capability.DataContract (class EncodeDataContract, encodeContractJson)
-import Data.Argonaut (class EncodeJson, stringify)
+import Data.Argonaut (class EncodeJson, Json, encodeJson, stringify)
+import Data.Argonaut.Core as A
+import Data.Tuple (Tuple(..))
 import Effect.Aff (Error)
 import FFI.DurableObject (DurableObjectResponse, doStringResponse)
+import Foreign.Object (fromFoldable)
 
-stringResponse :: ∀ m. (Applicative m) => String -> m DurableObjectResponse
-stringResponse resp = pure $ doStringResponse resp 200
+toDurableObjectResponse :: Response -> DurableObjectResponse
+toDurableObjectResponse x = doStringResponse (stringify x.body) x.statusCode
 
-jsonResponse :: ∀ a b m. (Applicative m) => (EncodeJson a) => (EncodeDataContract a b) => b -> m DurableObjectResponse
-jsonResponse = encodeContractJson >>> stringify >>> stringResponse
+type Response =
+  { statusCode :: Int
+  , body :: Json
+  }
 
-notFoundResponse :: ∀ m. (Applicative m) => String -> m DurableObjectResponse
-notFoundResponse msg = pure $ doStringResponse msg 404
+contractResponse ∷ ∀ a b. EncodeDataContract a b ⇒ Int → b → Response
+contractResponse code = { statusCode: _, body: _ } code <<< encodeContractJson
 
-errorResponse :: ∀ m. (Applicative m) => Error -> m DurableObjectResponse
-errorResponse err = pure $ doStringResponse (show err) 500
+jsonResponse :: ∀ a. (EncodeJson a) => Int -> a -> Response
+jsonResponse code = { statusCode: _, body: _ } code <<< encodeJson
+
+messageResponse :: Int -> String -> Response
+messageResponse code msg = { statusCode: _, body: _ } code $ json
+  where
+    json = A.fromObject ( fromFoldable [ Tuple "message" (A.fromString msg) ] )
+
+errorResponse :: Error -> Response
+errorResponse err = messageResponse 500 $ show err
+
+notFoundResponse :: String -> Response
+notFoundResponse msg = messageResponse 404 $ msg

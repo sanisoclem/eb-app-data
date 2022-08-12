@@ -13,12 +13,11 @@ import Data.Document.Ledger (LedgerDocument, creditAccount, debitAccount, delete
 import Data.Interface.Ledger (LedgerCommand(..), LedgerQuery(..), LedgerRequest(..), LedgerSubscription)
 import Data.Maybe (Maybe)
 import Data.Request (RequestMethod(..))
-import Data.Response (errorResponse, jsonResponse, notFoundResponse, stringResponse)
+import Data.Response (Response, contractResponse, errorResponse, messageResponse, notFoundResponse)
 import Data.Traversable (sequence)
 import Data.Utility (ensure)
 import Effect.Class (class MonadEffect)
 import Effect.Exception (Error)
-import FFI.DurableObject (DurableObjectResponse)
 
 handleLedgerRequest
   :: ∀ m
@@ -27,14 +26,14 @@ handleLedgerRequest
   => MonadThrow Error m
   => MonadError Error m
   => MonadEffect m
-  => m DurableObjectResponse
-handleLedgerRequest = catchError go errorResponse
+  => m Response
+handleLedgerRequest = catchError go (pure <<< errorResponse)
   where
   go = do
     method <- getRequestMethod
     case method of
       POST -> getBodyJson >>= handleRequest
-      _ -> notFoundResponse "Not found"
+      _ -> pure $ notFoundResponse "Not found"
 
 handleRequest
   :: ∀ m
@@ -42,12 +41,12 @@ handleRequest
   => MonadThrow Error m
   => MonadEffect m
   => LedgerRequest
-  -> m DurableObjectResponse
+  -> m Response
 handleRequest = case _ of
   LedgerCommand x -> do
     handleCommand x
     commitBatchState
-    stringResponse "OK"
+    pure $ messageResponse 200 "OK"
   LedgerQuery x -> handleQuery x
   LedgerSubscription x -> handleSubscription x
 
@@ -122,16 +121,16 @@ handleQuery
    . DurableStorage m
   => MonadThrow Error m
   => LedgerQuery
-  -> m DurableObjectResponse
+  -> m Response
 handleQuery = case _ of
   GetLedger -> do
     ledger :: LedgerDocument <- getState "ledger"
-    jsonResponse ledger
-  _ -> notFoundResponse "not implemented"
+    pure $ contractResponse 200 ledger
+  _ -> pure $ notFoundResponse "not implemented"
 
 handleSubscription
   :: ∀ m
    . Applicative m
   => LedgerSubscription
-  -> m DurableObjectResponse
-handleSubscription _ = notFoundResponse "not implemented"
+  -> m Response
+handleSubscription _ = pure $ notFoundResponse "not implemented"
