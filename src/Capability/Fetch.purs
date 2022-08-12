@@ -5,7 +5,7 @@ import Prelude
 import Capability.DataContract (class DecodeDataContract, decodeContractJson)
 import Capability.Has (class Has, getter)
 import Control.Monad.Error.Class (class MonadThrow, liftEither)
-import Control.Monad.Reader (class MonadAsk, asks)
+import Control.Monad.State (class MonadState, gets)
 import Data.Argonaut (jsonParser)
 import Data.Bifunctor (lmap)
 import Data.Request (RequestMethod)
@@ -16,16 +16,18 @@ import FFI.DurableObject (DurableObjectRequest, doRequestGetBody, doRequestGetMe
 class Monad m <= IncomingRequest m where
   getRequestMethod :: m RequestMethod
   getBodyString :: m String
-  getBodyJson :: ∀ a b. (DecodeDataContract a b) => m b
 
-instance incomingRequestInstance :: (Has s DurableObjectRequest, MonadAsk s m, MonadAff m, MonadThrow Error m) => IncomingRequest m where
+
+instance incomingRequestInstance :: (Has s DurableObjectRequest, MonadState s m, MonadAff m, MonadThrow Error m) => IncomingRequest m where
   getRequestMethod = do
-    request <- asks getter
+    request <- gets getter
     pure <<< doRequestGetMethod $ request
   getBodyString = do
-    request <- asks getter
+    request <- gets getter
     liftAff <<< doRequestGetBody $ request
-  getBodyJson = do
-    body <- getBodyString
-    parsed <- liftEither <<< lmap error <<< jsonParser $ body
-    liftEither <<< decodeContractJson $ parsed
+
+getBodyJson :: ∀ a b m. IncomingRequest m => MonadThrow Error m => DecodeDataContract a b => m b
+getBodyJson = do
+  body <- getBodyString
+  parsed <- liftEither <<< lmap error <<< jsonParser $ body
+  liftEither <<< decodeContractJson $ parsed

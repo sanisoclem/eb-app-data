@@ -1,7 +1,6 @@
 module Data.Request
-  ( RequestMethod (..)
-  )
-  where
+  ( RequestMethod(..)
+  ) where
 
 data RequestMethod
   = GET

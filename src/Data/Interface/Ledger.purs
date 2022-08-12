@@ -3,9 +3,9 @@ module Data.Interface.Ledger where
 import Prelude
 
 import Capability.DataContract (class DecodeDataContract, class EncodeDataContract)
-import Data.Common (AccountId, AccountType, Denomination, SubscriptionId, TransactionId)
-import Data.Maybe (Maybe)
+import Data.Common (AccountId, AccountType, Denomination, Money(..), SubscriptionId, TransactionId)
 import Data.Contract.Interface.Ledger (LedgerRequestContract(..))
+import Data.Maybe (Maybe)
 
 data LedgerRequest
   = LedgerQuery LedgerQuery
@@ -14,31 +14,33 @@ data LedgerRequest
 
 data LedgerCommand
   = UpdateLedger
-    { name :: String
-    }
+      { name :: String
+      }
   | CreateAccount
-    { name :: String
-    , accountType :: AccountType
-    , denomination :: Denomination
-    }
+      { name :: String
+      , accountType :: AccountType
+      , denomination :: Denomination
+      }
   | UpdateAccount
-    { accountId :: AccountId
-    , name :: String
-    }
+      { accountId :: AccountId
+      , name :: String
+      }
   | CloseAccount AccountId
   | CreateTransaction
-    { credit :: Maybe AccountId
-    , debit :: Maybe AccountId
-    , amount :: String -- todo: create a decimal type
-    , notes :: String
-    }
+      { sortKey :: Int
+      , credit :: Maybe AccountId
+      , debit :: Maybe AccountId
+      , amount :: Money
+      , notes :: String
+      }
   | UpdateTransaction
-    { transactionId :: TransactionId
-    , credit :: Maybe AccountId
-    , debit :: Maybe AccountId
-    , amount :: String
-    , notes :: String
-    }
+      { sortKey :: Int
+      , transactionId :: TransactionId
+      , credit :: Maybe AccountId
+      , debit :: Maybe AccountId
+      , amount :: Money
+      , notes :: String
+      }
   | DeleteTransaction TransactionId
 
 data LedgerQuery

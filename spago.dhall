@@ -29,6 +29,7 @@ to generate this file without the comments in this block.
   , "parsing"
   , "prelude"
   , "safe-coerce"
+  , "strings"
   , "transformers"
   , "uri"
   , "uuid"

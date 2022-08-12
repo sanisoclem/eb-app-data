@@ -4,37 +4,39 @@ import Data.Argonaut.Decode.Class (class DecodeJson)
 import Data.Argonaut.Decode.Generic (genericDecodeJson)
 import Data.Argonaut.Encode.Class (class EncodeJson)
 import Data.Argonaut.Encode.Generic (genericEncodeJson)
-import Data.Common (AccountId, AccountType, Denomination, SubscriptionId, TransactionId)
+import Data.Common (AccountId, AccountType, Denomination, Money(..), SubscriptionId, TransactionId)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
 
 data LedgerRequestContract
   = UpdateLedgerV1
-    { name :: String
-    }
+      { name :: String
+      }
   | CreateAccountV1
-    { name :: String
-    , accountType :: AccountType
-    , denomination :: Denomination
-    }
+      { name :: String
+      , accountType :: AccountType
+      , denomination :: Denomination
+      }
   | UpdateAccountV1
-    { accountId :: AccountId
-    , name :: String
-    }
+      { accountId :: AccountId
+      , name :: String
+      }
   | CloseAccountV1 AccountId
   | CreateTransactionV1
-    { credit :: Maybe AccountId
-    , debit :: Maybe AccountId
-    , amount :: String
-    , notes :: String
-    }
+      { sortKey :: Int
+      , credit :: Maybe AccountId
+      , debit :: Maybe AccountId
+      , amount :: Money
+      , notes :: String
+      }
   | UpdateTransactionV1
-    { transactionId :: TransactionId
-    , credit :: Maybe AccountId
-    , debit :: Maybe AccountId
-    , amount :: String
-    , notes :: String
-    }
+      { sortKey :: Int
+      , transactionId :: TransactionId
+      , credit :: Maybe AccountId
+      , debit :: Maybe AccountId
+      , amount :: Money
+      , notes :: String
+      }
   | DeleteTransactionV1 TransactionId
   | GetLedgerV1
   | GetTransactionsV1
@@ -44,5 +46,6 @@ data LedgerRequestContract
 derive instance ledgerCommandContractGeneric :: Generic LedgerRequestContract _
 instance ledgerRequestContractDecodeJson :: DecodeJson LedgerRequestContract where
   decodeJson a = genericDecodeJson a
+
 instance ledgerRequestContractEncodeJson :: EncodeJson LedgerRequestContract where
   encodeJson a = genericEncodeJson a

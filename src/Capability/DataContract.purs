@@ -33,3 +33,6 @@ generateId :: ∀ m a. (RandomId a) => (MonadEffect m) => m a
 generateId = do
   uuid <- toString <$> liftEffect genUUID
   pure $ generate uuid
+
+class (DocumentId b) <= Document a b | a -> b where
+  getDocumentId :: a -> b

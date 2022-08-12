@@ -1,14 +1,16 @@
 module FFI.DurableObject
-  ( DurableObjectRequest
+  ( BatchedPut
+  , DurableObjectRequest
   , DurableObjectResponse
   , DurableObjectState
-  , doRequestGetMethod
-  , doStringResponse
-  , doRequestGetBody
+  , doBatchState
+  , doDeleteState
   , doGetState
   , doPutState
-  , doDeleteState
-  , doBatchState
+  , doRequestGetBody
+  , doRequestGetMethod
+  , doStringResponse
+  , mkBatchedPut
   )
   where
 
@@ -16,6 +18,8 @@ import Prelude
 
 import Control.Promise (Promise, toAffE)
 import Data.Argonaut (Json)
+import Data.Array (fromFoldable)
+import Data.List (List)
 import Data.Maybe (Maybe(..))
 import Data.Request (RequestMethod(..))
 import Effect (Effect)
@@ -27,10 +31,12 @@ foreign import data DurableObjectResponse :: Type
 
 foreign import doStringResponse :: String -> Int -> DurableObjectResponse
 
-type BatchedPut =
-  { key :: String
-  , value :: Json
+newtype BatchedPut = BatchedPut
+  { id :: String
+  , document :: Json
   }
+mkBatchedPut ∷ String → Json → BatchedPut
+mkBatchedPut id document = BatchedPut { id, document }
 
 doRequestGetMethod :: DurableObjectRequest -> RequestMethod
 doRequestGetMethod req = case doRequestGetMethodImpl req of
@@ -52,8 +58,8 @@ doPutState state key = doPutStateImpl state key >>> toAffE
 doDeleteState :: DurableObjectState -> String -> Aff Unit
 doDeleteState state = doDeleteStateImpl state >>> toAffE
 
-doBatchState :: DurableObjectState -> Array String -> Array BatchedPut -> Aff Unit
-doBatchState state deletes = doBatchStateImpl state deletes >>> toAffE
+doBatchState :: DurableObjectState -> List String -> List BatchedPut -> Aff Unit
+doBatchState state deletes puts = toAffE $ doBatchStateImpl state (fromFoldable deletes) (fromFoldable puts)
 
 -- private
 foreign import doRequestGetBodyImpl :: DurableObjectRequest -> Effect (Promise String)

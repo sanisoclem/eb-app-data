@@ -17,7 +17,7 @@ export const doBatchStateImpl = state => deletes => puts => async () => {
     lastPromise = state.delete(deletes);
 
   puts.forEach(p => {
-    lastPromise = state.put(p.key, p.value);
+    lastPromise = state.put(p.id, p.document);
   });
 
   if (lastPromise !== null)
