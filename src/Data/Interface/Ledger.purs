@@ -3,14 +3,9 @@ module Data.Interface.Ledger where
 import Prelude
 
 import Capability.DataContract (class DecodeDataContract, class EncodeDataContract)
-import Data.Common (AccountId, AccountType, Denomination, Money(..), SubscriptionId, TransactionId)
-import Data.Contract.Interface.Ledger (LedgerRequestContract(..))
+import Data.Common (AccountId, AccountType, Denomination, Money, TransactionId)
+import Data.Contract.Interface.Ledger (LedgerCommandContract(..), LedgerQueryContract(..))
 import Data.Maybe (Maybe)
-
-data LedgerRequest
-  = LedgerQuery LedgerQuery
-  | LedgerCommand LedgerCommand
-  | LedgerSubscription LedgerSubscription
 
 data LedgerCommand
   = UpdateLedger
@@ -47,12 +42,9 @@ data LedgerQuery
   = GetLedger
   | GetTransactions
 
-data LedgerSubscription
-  = Subscribe String -- TODO must be https uri
-  | Unsubscribe SubscriptionId
 
-instance encodeDataContractLedgerRequest :: EncodeDataContract LedgerRequestContract LedgerRequest where
-  toContract (LedgerCommand cmd) = case cmd of
+instance encodeDataContractLedgerCommand :: EncodeDataContract LedgerCommandContract LedgerCommand where
+  toContract = case _ of
     UpdateLedger x -> UpdateLedgerV1 x
     CreateAccount x -> CreateAccountV1 x
     UpdateAccount x -> UpdateAccountV1 x
@@ -60,23 +52,23 @@ instance encodeDataContractLedgerRequest :: EncodeDataContract LedgerRequestCont
     CreateTransaction x -> CreateTransactionV1 x
     UpdateTransaction x -> UpdateTransactionV1 x
     DeleteTransaction x -> DeleteTransactionV1 x
-  toContract (LedgerQuery qry) = case qry of
+
+instance decodeDataContractLedgerCommand :: DecodeDataContract LedgerCommandContract LedgerCommand where
+  fromContract = pure <<< case _ of
+    UpdateLedgerV1 x -> UpdateLedger x
+    CreateAccountV1 x -> CreateAccount x
+    UpdateAccountV1 x -> UpdateAccount x
+    CloseAccountV1 x -> CloseAccount x
+    CreateTransactionV1 x -> CreateTransaction x
+    UpdateTransactionV1 x -> UpdateTransaction x
+    DeleteTransactionV1 x -> DeleteTransaction x
+
+instance encodeDataContractLedgerQuery :: EncodeDataContract LedgerQueryContract LedgerQuery where
+  toContract = case _ of
     GetLedger -> GetLedgerV1
     GetTransactions -> GetTransactionsV1
-  toContract (LedgerSubscription s) = case s of
-    Subscribe x -> SubscribeV1 x
-    Unsubscribe x -> UnsubscribeV1 x
 
-instance decodeDataContractLedgerRequest :: DecodeDataContract LedgerRequestContract LedgerRequest where
+instance decodeDataContractLedgerQuery :: DecodeDataContract LedgerQueryContract LedgerQuery where
   fromContract = pure <<< case _ of
-    UpdateLedgerV1 x -> LedgerCommand $ UpdateLedger x
-    CreateAccountV1 x -> LedgerCommand $ CreateAccount x
-    UpdateAccountV1 x -> LedgerCommand $ UpdateAccount x
-    CloseAccountV1 x -> LedgerCommand $ CloseAccount x
-    CreateTransactionV1 x -> LedgerCommand $ CreateTransaction x
-    UpdateTransactionV1 x -> LedgerCommand $ UpdateTransaction x
-    DeleteTransactionV1 x -> LedgerCommand $ DeleteTransaction x
-    GetLedgerV1 -> LedgerQuery GetLedger
-    GetTransactionsV1 -> LedgerQuery GetTransactions
-    SubscribeV1 x -> LedgerSubscription $ Subscribe x
-    UnsubscribeV1 x -> LedgerSubscription $ Unsubscribe x
+    GetLedgerV1 -> GetLedger
+    GetTransactionsV1 -> GetTransactions

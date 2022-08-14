@@ -4,11 +4,11 @@ import Data.Argonaut.Decode.Class (class DecodeJson)
 import Data.Argonaut.Decode.Generic (genericDecodeJson)
 import Data.Argonaut.Encode.Class (class EncodeJson)
 import Data.Argonaut.Encode.Generic (genericEncodeJson)
-import Data.Common (AccountId, AccountType, Denomination, Money(..), SubscriptionId, TransactionId)
+import Data.Common (AccountId, AccountType, Denomination, Money, TransactionId)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
 
-data LedgerRequestContract
+data LedgerCommandContract
   = UpdateLedgerV1
       { name :: String
       }
@@ -38,14 +38,21 @@ data LedgerRequestContract
       , notes :: String
       }
   | DeleteTransactionV1 TransactionId
-  | GetLedgerV1
-  | GetTransactionsV1
-  | SubscribeV1 String
-  | UnsubscribeV1 SubscriptionId
 
-derive instance ledgerCommandContractGeneric :: Generic LedgerRequestContract _
-instance ledgerRequestContractDecodeJson :: DecodeJson LedgerRequestContract where
+derive instance genericLedgerCommandContract :: Generic LedgerCommandContract _
+instance decodeJsonLedgerCommandContract :: DecodeJson LedgerCommandContract where
   decodeJson a = genericDecodeJson a
 
-instance ledgerRequestContractEncodeJson :: EncodeJson LedgerRequestContract where
+instance encodeJsonLedgerCommandContract :: EncodeJson LedgerCommandContract where
+  encodeJson a = genericEncodeJson a
+
+data LedgerQueryContract
+  = GetLedgerV1
+  | GetTransactionsV1
+
+derive instance genericLedgerQueryContract :: Generic LedgerQueryContract _
+instance decodeJsonLedgerQueryContract :: DecodeJson LedgerQueryContract where
+  decodeJson a = genericDecodeJson a
+
+instance encodeJsonLedgerQueryContract :: EncodeJson LedgerQueryContract where
   encodeJson a = genericEncodeJson a

@@ -8,15 +8,10 @@ import Data.Argonaut.Decode.Decoders (decodeInt)
 import Data.Argonaut.Decode.Generic (genericDecodeJson)
 import Data.Argonaut.Encode.Encoders (encodeInt)
 import Data.Argonaut.Encode.Generic (genericEncodeJson)
+import Data.Document.Id (accountIdPrefix, transactionIdPrefix)
 import Data.Generic.Rep (class Generic)
 import Data.String (Pattern(..), stripPrefix)
 import Safe.Coerce (coerce)
-
--- types that we don't need to version
--- rules:
---   - Don't remove constructors (enums)
---   - Don't implement DataContract (no versioning)
---   - Implement EncodeJson and DecodeJson
 
 newtype Money = Money Int
 derive newtype instance semiringMoney :: Semiring Money
@@ -75,8 +70,8 @@ newtype AccountId = AccountId String
 derive newtype instance decodeJsonAccountId :: DecodeJson AccountId
 derive newtype instance encodeJsonAccountId :: EncodeJson AccountId
 instance documentIdAccountId :: DocumentId AccountId where
-  fromDocumentId = coerce <<< stripPrefix (Pattern "account/")
-  toDocumentId = (<>) "account/" <<< coerce
+  fromDocumentId = coerce <<< stripPrefix (Pattern  accountIdPrefix)
+  toDocumentId = (<>) accountIdPrefix <<< coerce
 
 instance randomIdAccountId :: RandomId AccountId where
   generate = AccountId
@@ -86,8 +81,8 @@ derive newtype instance decodeJsonTransactionId :: DecodeJson TransactionId
 derive newtype instance encodeJsonTransactionId :: EncodeJson TransactionId
 
 instance documentIdTransactionId :: DocumentId TransactionId where
-  fromDocumentId = coerce <<< stripPrefix (Pattern "txn/")
-  toDocumentId = (<>) "txn/" <<< coerce
+  fromDocumentId = coerce <<< stripPrefix (Pattern transactionIdPrefix)
+  toDocumentId = (<>) transactionIdPrefix <<< coerce
 
 instance randomIdTransactionId :: RandomId TransactionId where
   generate = TransactionId
@@ -96,14 +91,3 @@ newtype SubscriptionId = SubscriptionId String
 
 derive newtype instance decodeJsonSubscriptionId :: DecodeJson SubscriptionId
 derive newtype instance encodeJsonSubscriptionId :: EncodeJson SubscriptionId
-
--- newtype TransactionPageId = TransactionPageId String
-
--- derive newtype instance decodeJsonTransactionPageId :: DecodeJson TransactionPageId
--- derive newtype instance encodeJsonTransactionPageId :: EncodeJson TransactionPageId
--- instance documentIdTransactionPageId :: DocumentId TransactionPageId where
---   fromDocumentId = coerce <<< stripPrefix (Pattern "transaction/page/")
---   toDocumentId = (<>) "transaction/page/" <<< coerce
-
--- instance randomIdTransactionPageId :: RandomId TransactionPageId where
---   generate = TransactionPageId

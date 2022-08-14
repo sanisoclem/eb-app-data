@@ -28,6 +28,7 @@ import Data.Argonaut.Encode.Class (class EncodeJson)
 import Data.Argonaut.Encode.Generic (genericEncodeJson)
 import Data.Common (AccountId, AccountType(..), Denomination, Instant, Money, TransactionId)
 import Data.Contract.Document.Ledger (LedgerDocumentContract(..))
+import Data.Document.Id (ledgerDocumentId)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Effect.Exception (Error)
@@ -44,9 +45,6 @@ instance encodeDataContractLedgerDocument :: EncodeDataContract LedgerDocumentCo
 
 instance decodeDataContractLedgerDocument :: DecodeDataContract LedgerDocumentContract LedgerDocument where
   fromContract (LedgerDocumentContractV1 d) = pure <<< coerce $ d
-
-ledgerDocumentId :: String
-ledgerDocumentId = "ledger"
 
 getLedger :: ∀ m. (DurableStorage m) => MonadThrow Error m => m LedgerDocumentRecord
 getLedger = do

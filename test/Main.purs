@@ -5,17 +5,17 @@ import Prelude
 import Capability.Storage (commitBatchState)
 import Data.Common (mkInstant)
 import Data.Document.Ledger (getLedger, putLedger)
-import Data.Interface.Ledger (LedgerCommand(..), LedgerRequest(..))
+import Data.Interface.Ledger (LedgerCommand(..))
 import Effect (Effect)
 import Effect.Aff (Aff, launchAff_)
 import Effect.Class (class MonadEffect)
-import Handlers.Ledger (handleLedgerRequest)
+import Handlers.Ledger (handleCommand)
 import Test.Spec (SpecT, describe, pending)
 import Test.Spec as Spec
 import Test.Spec.Assertions (shouldEqual)
 import Test.Spec.Reporter.Console (consoleReporter)
 import Test.Spec.Runner (defaultConfig, runSpecT)
-import Test.TestM (TestM, mkTestData, runTestM, setRequest)
+import Test.TestM (TestM, mkTestData, runTestM)
 
 it :: forall m. Monad m => String -> TestM Unit -> SpecT Aff Unit m Unit
 it desc = Spec.it desc <<< runTestM mkTestData
@@ -29,9 +29,14 @@ testSpec = do
     describe "Request Handler" do
       pending "should validate request signature"
       pending "should not validate request signature if not yet bootstrapped"
-      pending "should save outging messages to outbox"
+      pending "should save outgoing messages to outbox"
       pending "should schedule alarm"
-      pending "should update subscriptions"
+      pending "should commit batch"
+      describe "Subscribe" do
+        pending "should add subscription"
+      describe "Unsubscribe" do
+        pending "should remove subscription"
+        pending "should be noop if subscription doesn't exist"
       describe "Bootstrap" do
         pending "should fail if already bootstrapped"
         pending "should create indexes"
@@ -39,6 +44,8 @@ testSpec = do
         pending "should return private key" -- sign requests with private key
     describe "Alarm Handler" do
       pending "should send outboxed messages"
+      pending "should send max x times"
+      pending "should not send more than maxAge"
 
   describe "Budget" do
     describe "Commands" do
@@ -57,15 +64,14 @@ testSpec = do
       describe "UpdateLedger" do
         it "should update the ledger doc" do
           let name = "test"
-          setRequest <<< LedgerCommand $ UpdateLedger { name }
           putLedger { name: "old", createdAt: mkInstant 0 }
           commitBatchState
 
-          resp <- handleLedgerRequest
+          void <<< handleCommand $ UpdateLedger { name }
+          commitBatchState
 
           updated <- getLedger
           updated.name `shouldEqual` name
-          resp.statusCode `shouldEqual` 200
 
       describe "CreateAccount" do
         pending "should return the accountId"
