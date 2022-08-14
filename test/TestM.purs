@@ -2,13 +2,13 @@ module Test.TestM where
 
 import Prelude
 
-import Capability.DataContract (decodeContractJson, encodeContractJson)
+import Capability.DataContract (class EncodeDataContract, decodeContractJson, encodeContractJson)
 import Capability.Has (getter, setter, class Has, class HasSetter)
 import Capability.IncomingRequest (class IncomingRequest)
 import Capability.Storage (class DurableStorage)
 import Control.Monad.Error.Class (class MonadError, class MonadThrow, liftEither)
 import Control.Monad.State (StateT, runStateT, class MonadState, gets, modify_)
-import Data.Argonaut (Json)
+import Data.Argonaut (Json, stringify)
 import Data.List (List(..), (:))
 import Data.Map (Map, delete, empty, insert, lookup)
 import Data.Request (RequestMethod(..))
@@ -74,11 +74,11 @@ data TestData = TestData
   , batchPuts :: List BatchedPut
   , batchDeletes :: List String
   }
-mkTestData ∷ String -> Map String Json -> TestData
-mkTestData body d = TestData
+mkTestData ∷ TestData
+mkTestData = TestData
   { requestMethod: POST
-  , requestBody: body
-  , data: d
+  , requestBody: ""
+  , data: empty
   , batchPuts: Nil
   , batchDeletes: Nil
   }

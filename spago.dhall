@@ -28,6 +28,7 @@ to generate this file without the comments in this block.
   , "exceptions"
   , "foldable-traversable"
   , "foreign-object"
+  , "identity"
   , "lists"
   , "maybe"
   , "ordered-collections"
