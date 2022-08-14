@@ -7,7 +7,8 @@ import Capability.Has (getter, setter, class Has, class HasSetter)
 import Capability.IncomingRequest (class IncomingRequest)
 import Capability.Storage (class DurableStorage)
 import Control.Monad.Error.Class (class MonadError, class MonadThrow, liftEither)
-import Control.Monad.State (StateT, runStateT, class MonadState, gets, modify_)
+import Control.Monad.ST.Internal (modify)
+import Control.Monad.State (class MonadState, StateT, gets, modify_, runStateT)
 import Data.Argonaut (Json, stringify)
 import Data.List (List(..), (:))
 import Data.Map (Map, delete, empty, insert, lookup)
@@ -18,6 +19,7 @@ import Effect.Aff (Aff)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
 import Effect.Exception (Error)
+import Pipes.Core (request)
 import Safe.Coerce (coerce)
 import Test.Spec (class Example)
 
@@ -82,6 +84,14 @@ mkTestData = TestData
   , batchPuts: Nil
   , batchDeletes: Nil
   }
+
+setRequest
+  :: ∀ m a b
+   . MonadState TestData m
+  => EncodeDataContract b a
+  => a
+  -> m Unit
+setRequest x = modify_ (\(TestData t) -> TestData t { requestBody = stringify <<< encodeContractJson $ x })
 
 instance hasContextMethod :: Has TestData RequestMethod where
   getter (TestData x) = x.requestMethod
