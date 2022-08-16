@@ -11,3 +11,9 @@ accountIdPrefix = "account/"
 
 transactionIdPrefix :: String
 transactionIdPrefix = "txn/"
+
+indexPageIdPrefix :: String
+indexPageIdPrefix = "idxp/"
+
+indexIdPrefix :: String
+indexIdPrefix = "idx/"

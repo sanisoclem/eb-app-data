@@ -8,7 +8,7 @@ import Data.Argonaut.Decode.Decoders (decodeInt)
 import Data.Argonaut.Decode.Generic (genericDecodeJson)
 import Data.Argonaut.Encode.Encoders (encodeInt)
 import Data.Argonaut.Encode.Generic (genericEncodeJson)
-import Data.Document.Id (accountIdPrefix, transactionIdPrefix)
+import Data.Document.Id (accountIdPrefix, indexIdPrefix, indexPageIdPrefix, transactionIdPrefix)
 import Data.Generic.Rep (class Generic)
 import Data.String (Pattern(..), stripPrefix)
 import Safe.Coerce (coerce)
@@ -91,3 +91,25 @@ newtype SubscriptionId = SubscriptionId String
 
 derive newtype instance decodeJsonSubscriptionId :: DecodeJson SubscriptionId
 derive newtype instance encodeJsonSubscriptionId :: EncodeJson SubscriptionId
+
+
+newtype IndexPageId = IndexPageId String
+
+derive newtype instance decodeJsonIndexPageId :: DecodeJson IndexPageId
+derive newtype instance encodeJsonIndexPageId :: EncodeJson IndexPageId
+instance documentIdIndexPageId :: DocumentId IndexPageId where
+  fromDocumentId = coerce <<< stripPrefix (Pattern  indexPageIdPrefix)
+  toDocumentId = (<>) indexPageIdPrefix <<< coerce
+instance randomIdIndexPageId :: RandomId IndexPageId where
+  generate = IndexPageId
+
+newtype IndexId = IndexId String
+
+mkIndexId ∷ String → IndexId
+mkIndexId = IndexId
+
+derive newtype instance decodeJsonIndexId :: DecodeJson IndexId
+derive newtype instance encodeJsonIndexId :: EncodeJson IndexId
+instance documentIdIndexId :: DocumentId IndexId where
+  fromDocumentId = coerce <<< stripPrefix (Pattern indexIdPrefix)
+  toDocumentId = (<>) indexIdPrefix <<< coerce
