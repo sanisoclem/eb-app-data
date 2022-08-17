@@ -2,17 +2,28 @@ module Test.Main where
 
 import Prelude
 
+import Capability.Storage (commitBatchState)
+import Data.Common (mkInstant)
+import Data.Document.Ledger (getLedger, putLedger)
+import Data.Interface.Ledger (LedgerCommand(..))
 import Effect (Effect)
 import Effect.Aff (Aff, launchAff_)
+import Effect.Class (class MonadEffect)
+import Handlers.Ledger (handleCommand)
 import Test.Spec (SpecT, describe, pending)
-import Test.Spec.Reporter (consoleReporter)
-import Test.Spec.Runner (runSpec)
+import Test.Spec as Spec
+import Test.Spec.Assertions (shouldEqual)
+import Test.Spec.Reporter.Console (consoleReporter)
+import Test.Spec.Runner (defaultConfig, runSpecT)
+import Test.TestM (TestM, mkTestData, runTestM)
 
+it :: forall m. Monad m => String -> TestM Unit -> SpecT Aff Unit m Unit
+it desc = Spec.it desc <<< runTestM mkTestData
 
 main :: Effect Unit
-main = launchAff_ <<< runSpec [consoleReporter] $ testSpec
+main = launchAff_ <<< void <<< identity <=< runSpecT defaultConfig [consoleReporter] $ testSpec
 
-testSpec ∷ ∀ m. Monad m => SpecT Aff Unit m Unit
+testSpec ∷ ∀ m. Functor m ⇒ Monad m ⇒ MonadEffect m ⇒ SpecT Aff Unit m Unit
 testSpec = do
   describe "Durable Object Handler" do
     describe "Request Handler" do
@@ -51,7 +62,17 @@ testSpec = do
         pending "should create ledger and balance document"
 
       describe "UpdateLedger" do
-        pending "should update the ledger doc"
+        it "should update the ledger doc" do
+          let name = "test"
+          putLedger { name: "old", createdAt: mkInstant 0 }
+          commitBatchState
+
+          void <<< handleCommand $ UpdateLedger { name }
+          commitBatchState
+
+          updated <- getLedger
+          updated.name `shouldEqual` name
+
       describe "CreateAccount" do
         pending "should return the accountId"
         pending "should update balances doc"

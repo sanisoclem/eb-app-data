@@ -1,4 +1,4 @@
-module Data.Utility where
+module Capability.Utility where
 
 import Prelude
 

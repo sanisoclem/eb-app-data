@@ -5,31 +5,34 @@ module Handlers.Ledger
 
 import Prelude
 
-import Capability.DataContract (generateId)
-import Capability.Storage (class DurableStorage, getState)
+import Capability.EventEmitter (class EventEmitter, emit)
+import Capability.LedgerStorage (class LedgerStorage, deleteTransaction, getAccount, getLedger, getTransaction, postTransaction, putAccount, putLedger, putTransaction)
+import Capability.RandomId (generateId)
+import Capability.Utility (ensure)
 import Control.Monad.Error.Class (class MonadThrow)
-import Data.Common (AccountId, Money, zeroMoney)
-import Data.Document.Ledger (LedgerDocument, creditAccount, debitAccount, deleteTransaction, getAccount, getLedger, getTransaction, postTransaction, putAccount, putLedger, putTransaction)
-import Data.Event.Ledger (LedgerEvent)
-import Data.Interface.Ledger (LedgerCommand(..), LedgerQuery(..))
-import Data.Maybe (Maybe(..))
-import Data.Response (Response, contractResponse, notFoundResponse)
+import Data.Command.Ledger (LedgerCommand(..))
+import Data.Common (AccountId)
+import Data.Document.Ledger (creditAccount, debitAccount)
+import Data.Event.Ledger (LedgerEvent(..))
+import Data.Maybe (Maybe)
+import Data.Money (Money, zeroMoney)
+import Data.Query.Ledger (LedgerQuery(..))
 import Data.Traversable (sequence)
-import Data.Utility (ensure)
 import Effect.Class (class MonadEffect)
 import Effect.Exception (Error)
 
 handleCommand
   :: ∀ m
-   . DurableStorage m
+   . LedgerStorage m
+  => EventEmitter LedgerEvent m
   => MonadThrow Error m
   => MonadEffect m
   => LedgerCommand
-  -> m (Maybe LedgerEvent)
+  -> m Unit
 handleCommand = case _ of
   UpdateLedger x -> do
     putLedger =<< _ { name = x.name } <$> getLedger
-    pure Nothing
+    emit LedgerUpdated
   CreateAccount x -> do
     accountId <- generateId
     putAccount
@@ -40,16 +43,16 @@ handleCommand = case _ of
       , name: x.name
       , closed: false
       }
-    pure Nothing
+    emit AccountCreated
   UpdateAccount x -> do
     account <- getAccount x.accountId
     putAccount account { name = x.name }
-    pure Nothing
+    emit AccountUpdated
   CloseAccount accountId -> do
     account <- getAccount accountId
     ensure "Account balance should be zero" $ account.balance == zeroMoney
     putAccount account { closed = true }
-    pure Nothing
+    emit AccountClosed
   CreateTransaction x -> do
     transactionId <- generateId
     postTransaction
@@ -62,7 +65,8 @@ handleCommand = case _ of
       }
     getDebitPut x.debit x.amount
     getCreditPut x.credit x.amount
-    pure Nothing
+    emit TransactionCreated
+    emit BalanceUpdated
   UpdateTransaction x -> do
     prevTrans <- getTransaction x.transactionId
     -- reverse prev transaction
@@ -79,28 +83,30 @@ handleCommand = case _ of
     putTransaction updatedTrans
     getDebitPut updatedTrans.debit updatedTrans.amount
     getCreditPut updatedTrans.credit updatedTrans.amount
-    pure Nothing
+    emit TransactionUpdated
+    emit BalanceUpdated
   DeleteTransaction transactionId -> do
     trans <- getTransaction transactionId
     getDebitPut trans.credit trans.amount
     getCreditPut trans.debit trans.amount
     deleteTransaction transactionId
-    pure Nothing
+    emit TransactionDeleted
+    emit BalanceUpdated
 
-getDebitPut :: forall m. MonadThrow Error m => DurableStorage m => Maybe AccountId -> Money -> m Unit
+getDebitPut :: forall m. MonadThrow Error m => LedgerStorage m => Maybe AccountId -> Money -> m Unit
 getDebitPut maybeAccount amount = void <<< sequence $ (putAccount <<< debitAccount amount <=< getAccount) <$> maybeAccount
 
-getCreditPut :: forall m. MonadThrow Error m => DurableStorage m => Maybe AccountId -> Money -> m Unit
+getCreditPut :: forall m. MonadThrow Error m => LedgerStorage m => Maybe AccountId -> Money -> m Unit
 getCreditPut maybeAccount amount = void <<< sequence $ (putAccount <<< creditAccount amount <=< getAccount) <$> maybeAccount
 
 handleQuery
   :: ∀ m
-   . DurableStorage m
+   . LedgerStorage m
   => MonadThrow Error m
   => LedgerQuery
-  -> m Response
+  -> m Unit -- TODO
 handleQuery = case _ of
   GetLedger -> do
-    ledger :: LedgerDocument <- getState "ledger"
-    pure $ contractResponse 200 ledger
-  _ -> pure $ notFoundResponse "not implemented"
+    ledger <- getLedger
+    pure unit
+  _ -> pure unit
