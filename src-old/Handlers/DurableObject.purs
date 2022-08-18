@@ -17,7 +17,7 @@ import Effect.Class (class MonadEffect)
 import Effect.Exception (Error, error)
 
 handleFetch
-  :: forall m cmd qry evt cmdContract qryContract f evtContract
+  :: ∀ m cmd qry evt cmdContract qryContract f evtContract
    . DurableStorage m
   => MonadEffect m
   => MonadError Error m
@@ -56,7 +56,7 @@ handleFetch handleCmd handleQry = catchError go (pure <<< errorResponse)
       Query qry -> handleQry qry
 
 handleAlarm
-  :: forall m
+  :: ∀ m
    . DurableStorage m
   => MonadThrow Error m
   => m Unit

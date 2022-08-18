@@ -30,19 +30,19 @@ instance encodeDataContractOutboxDocument :: EncodeDataContract OutboxContract O
 instance decodeDataContractOutboxDocument :: DecodeDataContract OutboxContract OutboxDocument where
   fromContract (OutboxContractV1 x) = pure $ OutboxDocument x
 
-getOutbox :: forall m. DurableStorage m => MonadThrow Error m => m OutboxDocumentRecord
+getOutbox :: ∀ m. DurableStorage m => MonadThrow Error m => m OutboxDocumentRecord
 getOutbox = do
   (OutboxDocument outbox) <- getState outboxDocumentId
   pure outbox
 
-addToOutbox :: forall m evt' evt f. Foldable f => Functor f => DurableStorage m => MonadThrow Error m => EncodeDataContract evt' evt => f evt -> m Unit
+addToOutbox :: ∀ m evt' evt f. Foldable f => Functor f => DurableStorage m => MonadThrow Error m => EncodeDataContract evt' evt => f evt -> m Unit
 addToOutbox evts = do
   outbox <- getOutbox
   let serialized = fromFoldable $ ((stringify <<< encodeContractJson) <$> evts)
   batchPutState outboxDocumentId <<< OutboxDocument $ outbox { toSend = outbox.toSend <> serialized }
 
 clearOutbox
-  :: forall m
+  :: ∀ m
    . DurableStorage m
   => m Unit
 clearOutbox = putState outboxDocumentId $ OutboxDocument { toSend: [] }
@@ -76,7 +76,7 @@ instance encodeDataContractIndexPageDocument :: (EncodeJson a, Ord a) => EncodeD
 instance decodeDataContractIndexPageDocument :: (DecodeJsonField a, Ord a) => DecodeDataContract (IndexPageContract a) (IndexPageDocument a) where
   fromContract (IndexPageContractV1 x) = pure $ IndexPageDocument x
 
-createIndex :: forall a m. DurableStorage m => EncodeJson a => Ord a => String -> Int -> m (IndexDocument a)
+createIndex :: ∀ a m. DurableStorage m => EncodeJson a => Ord a => String -> Int -> m (IndexDocument a)
 createIndex name pageSize = do
   let indexId = mkIndexId name
   let idx = IndexDocument { indexId, pageSize, pages: empty }
@@ -84,7 +84,7 @@ createIndex name pageSize = do
   pure idx
 
 -- caveat: does not work when there are pending changes for this index
-addToIndex :: forall a m. DurableStorage m => MonadThrow Error m => DecodeJson a => EncodeJson a => Ord a => IndexId -> a -> String -> m Unit
+addToIndex :: ∀ a m. DurableStorage m => MonadThrow Error m => DecodeJson a => EncodeJson a => Ord a => IndexId -> a -> String -> m Unit
 addToIndex indexId val docId = do
   index <- getState indexId
   page <- getIndexPage index val
@@ -92,12 +92,12 @@ addToIndex indexId val docId = do
   batchPutState (toDocumentId updatedIndex.indexId) updatedIndex
   sequence $ (\p -> batchPutState (toDocumentId p.pageId) p) <$> updatedPages
 
--- queryRange :: forall a m. DurableStorage m => a -> a -> Array String
+-- queryRange :: ∀ a m. DurableStorage m => a -> a -> Array String
 -- queryRange minInc maxInc = do
 --   ?todo
 
 
-getIndexPage :: forall a m. MonadEffect m => DurableStorage m => Ord a => DecodeJsonField a => MonadThrow Error m => IndexDocument a -> a -> m (IndexPageDocument a)
+getIndexPage :: ∀ a m. MonadEffect m => DurableStorage m => Ord a => DecodeJsonField a => MonadThrow Error m => IndexDocument a -> a -> m (IndexPageDocument a)
 getIndexPage (IndexDocument index) val = case lookupLE val index.pages of
   Just page -> getState (toDocumentId page.value)
   Nothing -> do
@@ -107,7 +107,7 @@ getIndexPage (IndexDocument index) val = case lookupLE val index.pages of
       }
     pure newPage
 
-addToPage :: forall a. IndexDocument a -> IndexPageDocument a -> a -> String -> { updatedPages :: Array (IndexPageDocument a), updatedIndex :: IndexDocument a }
+addToPage :: ∀ a. IndexDocument a -> IndexPageDocument a -> a -> String -> { updatedPages :: Array (IndexPageDocument a), updatedIndex :: IndexDocument a }
 addToPage index page val docId = do
 
   ?todo

@@ -119,22 +119,22 @@ instance encodeDataContractTransactionDocument :: EncodeDataContract Transaction
 instance decodeDataContractTransactionDocument :: DecodeDataContract TransactionDocument TransactionDocument where
   fromContract = Just
 
-getTransaction :: forall m. DurableStorage m => MonadThrow Error m => TransactionId -> m TransactionDocumentRecord
+getTransaction :: ∀ m. DurableStorage m => MonadThrow Error m => TransactionId -> m TransactionDocumentRecord
 getTransaction id = do
   TransactionDocument x <- getState <<< toDocumentId $ id
   pure x
 
-putTransaction :: forall m. (DurableStorage m) => TransactionDocumentRecord -> m Unit
+putTransaction :: ∀ m. (DurableStorage m) => TransactionDocumentRecord -> m Unit
 putTransaction x = do
   -- TODO: update index
   batchPutState (toDocumentId x.transactionId) $ TransactionDocument x
 
-postTransaction :: forall m. (DurableStorage m) => TransactionDocumentRecord -> m Unit
+postTransaction :: ∀ m. (DurableStorage m) => TransactionDocumentRecord -> m Unit
 postTransaction x = do
   -- TODO: update index
   batchPutState (toDocumentId x.transactionId) $ TransactionDocument x
 
-deleteTransaction :: forall m. (DurableStorage m) => TransactionId -> m Unit
+deleteTransaction :: ∀ m. (DurableStorage m) => TransactionId -> m Unit
 deleteTransaction transactionId = do
   -- TODO: update index
   batchDeleteState <<< toDocumentId $ transactionId

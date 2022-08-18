@@ -17,7 +17,7 @@ import Test.Spec.Reporter.Console (consoleReporter)
 import Test.Spec.Runner (defaultConfig, runSpecT)
 import Test.TestM (TestM, mkTestData, runTestM)
 
-it :: forall m. Monad m => String -> TestM Unit -> SpecT Aff Unit m Unit
+it :: ∀ m. Monad m => String -> TestM Unit -> SpecT Aff Unit m Unit
 it desc = Spec.it desc <<< runTestM mkTestData
 
 main :: Effect Unit

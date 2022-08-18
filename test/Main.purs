@@ -67,10 +67,12 @@ testSpec = do
         pending "should create transaction document"
         pending "should update account balances if specified"
         pending "should fail if accounts are invalid"
+        pending "should fail if credit and debit accounts are the same"
       describe "UpdateTransaction" do
         pending "should update transaction document"
         pending "should update account balances if specified"
         pending "should fail if accounts are invalid"
+        pending "should fail if credit and debit accounts are the same"
       describe "DeleteTransaction" do
         pending "should delete transaction document"
         pending "should update account balances if specified"

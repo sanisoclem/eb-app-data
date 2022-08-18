@@ -31,15 +31,3 @@ instance decodeJsonDenomination :: DecodeJson Denomination where
 instance encodeJsonDenomination :: EncodeJson Denomination where
   encodeJson = genericEncodeJson
 
-newtype AccountId = AccountId String
-derive newtype instance decodeJsonAccountId :: DecodeJson AccountId
-derive newtype instance encodeJsonAccountId :: EncodeJson AccountId
-instance randomIdAccountId :: RandomId AccountId where
-  generate = AccountId
-
-newtype TransactionId = TransactionId String
-derive newtype instance decodeJsonTransactionId :: DecodeJson TransactionId
-derive newtype instance encodeJsonTransactionId :: EncodeJson TransactionId
-instance randomIdTransactionId :: RandomId TransactionId where
-  generate = TransactionId
-

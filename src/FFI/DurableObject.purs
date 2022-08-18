@@ -19,7 +19,7 @@ import Prelude
 import Control.Promise (Promise, toAffE)
 import Data.Argonaut (Json)
 import Data.Array (fromFoldable)
-import Data.List (List)
+import Data.Foldable (class Foldable)
 import Data.Maybe (Maybe(..))
 import Data.Request (RequestMethod(..))
 import Effect (Effect)
@@ -58,8 +58,8 @@ doPutState state key = doPutStateImpl state key >>> toAffE
 doDeleteState :: DurableObjectState -> String -> Aff Unit
 doDeleteState state = doDeleteStateImpl state >>> toAffE
 
-doBatchState :: DurableObjectState -> List String -> List BatchedPut -> Aff Unit
-doBatchState state deletes puts = toAffE $ doBatchStateImpl state (fromFoldable deletes) (fromFoldable puts)
+doBatchState :: ∀ f f'. Foldable f => Foldable f' => DurableObjectState -> f BatchedPut -> f' String -> Aff Unit
+doBatchState state puts deletes = toAffE $ doBatchStateImpl state (fromFoldable deletes) (fromFoldable puts)
 
 -- private
 foreign import doRequestGetBodyImpl :: DurableObjectRequest -> Effect (Promise String)

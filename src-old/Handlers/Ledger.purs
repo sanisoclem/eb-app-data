@@ -87,10 +87,10 @@ handleCommand = case _ of
     deleteTransaction transactionId
     pure Nothing
 
-getDebitPut :: forall m. MonadThrow Error m => DurableStorage m => Maybe AccountId -> Money -> m Unit
+getDebitPut :: ∀ m. MonadThrow Error m => DurableStorage m => Maybe AccountId -> Money -> m Unit
 getDebitPut maybeAccount amount = void <<< sequence $ (putAccount <<< debitAccount amount <=< getAccount) <$> maybeAccount
 
-getCreditPut :: forall m. MonadThrow Error m => DurableStorage m => Maybe AccountId -> Money -> m Unit
+getCreditPut :: ∀ m. MonadThrow Error m => DurableStorage m => Maybe AccountId -> Money -> m Unit
 getCreditPut maybeAccount amount = void <<< sequence $ (putAccount <<< creditAccount amount <=< getAccount) <$> maybeAccount
 
 handleQuery
