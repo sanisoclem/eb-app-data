@@ -5,14 +5,14 @@ module Handlers.Ledger
 
 import Prelude
 
-import Capability.Storage.Ledger (class MonadLedgerStorage, deleteTransaction, getAccount, getLedger, getTransaction, postTransaction, putAccount, putLedger, putTransaction)
+import Capability.Storage.Ledger (class MonadLedgerDb, deleteTransaction, getAccount, getLedger, getTransaction, postTransaction, putAccount, putLedger, putTransaction)
 import Capability.RandomId (generateId)
 import Capability.Storage.Outbox (class MonadOutbox, queue)
 import Capability.Utility (ensure)
 import Control.Monad.Error.Class (class MonadThrow)
 import Data.Command.Ledger (LedgerCommand(..))
 import Data.Common (AccountId)
-import Data.Document.Ledger (creditAccount, debitAccount)
+import Data.Database.Ledger (creditAccount, debitAccount)
 import Data.Event.Ledger (LedgerEvent(..))
 import Data.Maybe (Maybe)
 import Data.Money (Money, zeroMoney)
@@ -23,7 +23,7 @@ import Effect.Exception (Error)
 
 handleCommand
   :: ∀ m
-   . MonadLedgerStorage m
+   . MonadLedgerDb m
   => MonadOutbox LedgerEvent m
   => MonadThrow Error m
   => MonadEffect m
@@ -93,15 +93,15 @@ handleCommand = case _ of
       queue TransactionDeleted
       queue BalanceUpdated
 
-getDebitPut :: ∀ m. MonadThrow Error m => MonadLedgerStorage m => Maybe AccountId -> Money -> m Unit
+getDebitPut :: ∀ m. MonadThrow Error m => MonadLedgerDb m => Maybe AccountId -> Money -> m Unit
 getDebitPut maybeAccount amount = void <<< sequence $ (putAccount <<< debitAccount amount <=< getAccount) <$> maybeAccount
 
-getCreditPut :: ∀ m. MonadThrow Error m => MonadLedgerStorage m => Maybe AccountId -> Money -> m Unit
+getCreditPut :: ∀ m. MonadThrow Error m => MonadLedgerDb m => Maybe AccountId -> Money -> m Unit
 getCreditPut maybeAccount amount = void <<< sequence $ (putAccount <<< creditAccount amount <=< getAccount) <$> maybeAccount
 
 handleQuery
   :: ∀ m
-   . MonadLedgerStorage m
+   . MonadLedgerDb m
   => MonadThrow Error m
   => LedgerQuery
   -> m Unit -- TODO

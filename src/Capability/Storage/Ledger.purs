@@ -1,11 +1,15 @@
 module Capability.Storage.Ledger where
 
 import Prelude
-import Data.Document.Ledger (AccountDocumentRecord, LedgerDocumentRecord, TransactionDocumentRecord)
-import Data.Common (AccountId, TransactionId)
-import Control.Monad.Trans.Class (class MonadTrans, lift)
 
-class Monad m <= MonadLedgerStorage m where
+import Capability.Storage.Database (class MonadDatabase, getDocument, putDocument)
+import Control.Monad.Error.Class (class MonadThrow)
+import Control.Monad.Trans.Class (class MonadTrans, lift)
+import Data.Common (AccountId, TransactionId, ledgerId)
+import Data.Database.Ledger (AccountDocumentRecord, LedgerDatabaseId, LedgerDocument, LedgerDocumentRecord, TransactionDocumentRecord, accountDocument, ledgerDocument, unAccountDocument, unLedgerDocument)
+import Effect.Exception (Error)
+
+class Monad m <= MonadLedgerDb m where
   getLedger :: m LedgerDocumentRecord
   putLedger :: LedgerDocumentRecord -> m Unit
   getAccount :: AccountId -> m AccountDocumentRecord
@@ -24,3 +28,16 @@ class Monad m <= MonadLedgerStorage m where
 --   putTransaction = lift <<< putTransaction
 --   postTransaction = lift <<< postTransaction
 --   deleteTransaction = lift <<< deleteTransaction
+
+instance (Monad m, MonadDatabase LedgerDatabaseId m) => MonadLedgerDb m where
+  getLedger = unLedgerDocument <$> getDocument ledgerId
+  putLedger = putDocument <<< ledgerDocument
+  getAccount accountId = unAccountDocument <$> getDocument accountId
+  putAccount = putDocument <<< accountDocument
+  getTransaction = ?todo
+  putTransaction = ?todo
+  postTransaction = ?todo
+  deleteTransaction = ?todo
+
+getLedger2 :: forall m. MonadThrow Error m => MonadDatabase LedgerDatabaseId m => m LedgerDocumentRecord
+getLedger2 = unLedgerDocument <$> getDocument ledgerId

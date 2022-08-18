@@ -2,34 +2,73 @@ module Capability.Storage.Database where
 
 import Prelude
 
-import Capability.Codec (class Decodable, decode)
-import Capability.Storage.Transactional (class MonadTransactionalStorage, batchGetState)
-import Control.Monad.Error.Class (class MonadThrow, liftEither)
-import Control.Monad.Rec.Class (tailRecM)
-import Data.Maybe (Maybe)
-import Data.Symbol (class IsSymbol, reflectSymbol)
-import Data.Unit (Unit, unit)
-import Data.Void (Void, absurd)
-import Effect.Class (liftEffect)
-import Effect.Exception (Error)
-import Prim.Row as Row
-import Prim.RowList as RL
-import Record.Unsafe (unsafeGet, unsafeSet)
-import Type.Proxy (Proxy(..))
+import Data.Argonaut (Json, JsonDecodeError, printJsonDecodeError)
+import Data.Bifunctor (lmap)
+import Data.Either (Either)
+import Effect.Exception (Error, error)
 
-class DocumentId id schema | id -> schema where
-  documentIdString :: id -> String
+
 
 -- getDocument :: forall m a docId schema. MonadThrow Error m => MonadTransactionalStorage m => Decodable a => DocumentId docId => docId -> m a
 -- getDocument docId = do
---   liftEither <=< map decode <<< batchGetState <<< documentIdString $ docId
+--   liftEither <=< map decode <<< batchGetState <<< dbIdString $ docId
 
-class DocumentIndex idx idxv schema | idx -> schema, idx -> idxv where
-  getIndexId :: idx -> String
+class DatabaseId dbId where
+  dbIdString :: dbId -> String
 
-class (Monad m, DocumentId docId schema) <= MonadDatabase schema docId idx idxv m | schema -> docId, schema -> idx, idx -> idxv where
-  getDocument :: forall a. Decodable a => DocumentId docId schema => docId -> m a
-  getFromIndex :: forall a. DocumentIndex idx idxv schema => idx -> Maybe idxv -> Maybe idxv -> m (Array a)
+class DocumentId dbId docId where
+  wrapDocumentId :: docId -> dbId
+
+class DatabaseDocument doc docId | doc -> docId where
+  getDocumentId :: doc -> docId
+  decode :: Json -> Either JsonDecodeError doc
+  encode :: doc -> Json
+
+class (Monad m, DatabaseId dbId) <= MonadDatabase dbId m | m -> dbId where
+  getDocument :: forall doc docId. DatabaseDocument doc docId => DocumentId dbId docId => docId -> m doc
+  putDocument :: forall doc docId. DatabaseDocument doc docId => DocumentId dbId docId => doc -> m Unit
+  deleteDocument :: forall docId. DocumentId dbId docId => docId -> m Unit
+
+-- instance testInstance :: (MonadTransactionalStorage m, MonadThrow Error m, DatabaseId dbId) => MonadDatabase dbId m where
+--   getDocument id = do
+--     let (dbId :: dbId) =  wrapDocumentId id
+--     jsonState <- batchGetState <<< ((<>) "d/") <<< dbIdString $ dbId
+--     liftEither <<< convertJsonErrorToError $ decode jsonState
+--   putDocument doc = do
+--     let (dbId :: dbId) = wrapDocumentId $ getDocumentId doc
+--     batchPutState (dbIdString dbId) $ encode doc
+--   deleteDocument docId = do
+--     let (dbId :: dbId) = wrapDocumentId docId
+--     batchDeleteState $ dbIdString dbId
+
+convertJsonErrorToError :: forall a. Either JsonDecodeError a -> Either Error a
+convertJsonErrorToError = lmap (error <<< printJsonDecodeError)
+
+  -- getFromIndex index min max = do
+  --   (indexDoc :: IndexPage) <- map decodeJson <<< batchGetState $ getIndexId index
+  --   ?todo
+
+-- class DatabaseIndex idx where
+--   getIndexId :: idx -> String
+
+-- class DatabaseIndexValue idxv  where
+--   encodeIndexValue :: idxv -> Json
+--   decodeIndexValue :: forall v. Ord v => Json -> v
+
+-- class (Monad m, DatabaseId docId, DatabaseIndex idx, DatabaseIndexValue idxv) <= MonadIndexedDatabase docId idx idxv m where
+--   getFromIndex :: forall doc. DatabaseDocument doc docId => idx -> Maybe idxv -> Maybe idxv -> m (Array doc)
+
+-- instance testIndexedInstance :: (MonadTransactionalStorage m, MonadThrow Error m, DatabaseId docId) => MonadIndexedDatabase docId m where
+--   getFromIndex index min max = do
+--     (indexDoc :: IndexPage) <- map decodeJson <<< batchGetState $ getIndexId index
+
+
+-- type IndexPage = Map Json (Array String)
+
+
+-- class (Monad m, DocumentId docId schema) <= MonadDatabase schema docId idx idxv m | schema -> docId, schema -> idx, idx -> idxv where
+--   getDocument :: forall a. SchemaDocument a schema => DocumentId docId schema => docId -> m a
+--   getFromIndex :: forall a. DocumentIndex idx idxv schema => idx -> Maybe idxv -> Maybe idxv -> m (Array a)
   -- putUniqueDocument :: forall a. UniqueDocument a => a -> m Unit
   -- putDocument :: forall a. DocumentCollection a => a -> m Unit
 

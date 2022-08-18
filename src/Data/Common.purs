@@ -8,6 +8,7 @@ import Data.Argonaut.Decode.Decoders (decodeInt)
 import Data.Argonaut.Decode.Generic (genericDecodeJson)
 import Data.Argonaut.Encode.Generic (genericEncodeJson)
 import Data.Generic.Rep (class Generic)
+import Safe.Coerce (coerce)
 
 data AccountType
   = Income
@@ -31,3 +32,22 @@ instance decodeJsonDenomination :: DecodeJson Denomination where
 instance encodeJsonDenomination :: EncodeJson Denomination where
   encodeJson = genericEncodeJson
 
+newtype AccountId = AccountId String
+unAccountId ∷ AccountId → String
+unAccountId = coerce
+derive newtype instance decodeJsonAccountId :: DecodeJson AccountId
+derive newtype instance encodeJsonAccountId :: EncodeJson AccountId
+instance randomIdAccountId :: RandomId AccountId where
+  generate = AccountId
+
+newtype TransactionId = TransactionId String
+unTransactionId ∷ TransactionId → String
+unTransactionId = coerce
+derive newtype instance decodeJsonTransactionId :: DecodeJson TransactionId
+derive newtype instance encodeJsonTransactionId :: EncodeJson TransactionId
+instance randomIdTransactionId :: RandomId TransactionId where
+  generate = TransactionId
+
+newtype LedgerId = LedgerId Unit
+ledgerId :: LedgerId
+ledgerId = LedgerId unit
