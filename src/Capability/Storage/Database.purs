@@ -1,23 +1,27 @@
 module Capability.Storage.Database where
 
 import Prelude
-
-import Data.Argonaut (Json, JsonDecodeError, printJsonDecodeError)
+import Control.Monad.Error.Class (class MonadThrow, liftEither)
+import Capability.Storage.Transactional (class MonadTransactionalStorage, batchDeleteState, batchGetState, batchPutState, batchTryGetState)
+import Data.Argonaut (Json, JsonDecodeError, decodeJson, encodeJson, printJsonDecodeError)
+import Data.Array (delete, elem, foldl, insert, singleton, union)
 import Data.Bifunctor (lmap)
-import Data.Either (Either)
+import Data.Either (Either, hush, note)
+import Data.Filterable (filterMap)
+import Data.FunctorWithIndex (mapWithIndex)
+import Data.Map (Map, alter, foldSubmap, intersectionWith)
+import Data.Maybe (Maybe(..))
+import Data.Traversable (sequence)
 import Effect.Exception (Error, error)
-
-
-
--- getDocument :: forall m a docId schema. MonadThrow Error m => MonadTransactionalStorage m => Decodable a => DocumentId docId => docId -> m a
--- getDocument docId = do
---   liftEither <=< map decode <<< batchGetState <<< dbIdString $ docId
+import Type.Proxy (Proxy)
 
 class DatabaseId dbId where
   dbIdString :: dbId -> String
+  dbIdFromString :: String -> Maybe dbId
 
 class DocumentId dbId docId where
   wrapDocumentId :: docId -> dbId
+  tryUnwrapDocumentId :: dbId -> Maybe docId
 
 class DatabaseDocument doc docId | doc -> docId where
   getDocumentId :: doc -> docId
@@ -25,126 +29,117 @@ class DatabaseDocument doc docId | doc -> docId where
   encode :: doc -> Json
 
 class (Monad m, DatabaseId dbId) <= MonadDatabase dbId m | m -> dbId where
-  getDocument :: forall doc docId. DatabaseDocument doc docId => DocumentId dbId docId => docId -> m doc
+  tryGetDocument :: forall doc docId. DatabaseDocument doc docId => DocumentId dbId docId => docId -> m (Maybe doc)
   putDocument :: forall doc docId. DatabaseDocument doc docId => DocumentId dbId docId => doc -> m Unit
   deleteDocument :: forall docId. DocumentId dbId docId => docId -> m Unit
 
--- instance testInstance :: (MonadTransactionalStorage m, MonadThrow Error m, DatabaseId dbId) => MonadDatabase dbId m where
---   getDocument id = do
---     let (dbId :: dbId) =  wrapDocumentId id
---     jsonState <- batchGetState <<< ((<>) "d/") <<< dbIdString $ dbId
---     liftEither <<< convertJsonErrorToError $ decode jsonState
---   putDocument doc = do
---     let (dbId :: dbId) = wrapDocumentId $ getDocumentId doc
---     batchPutState (dbIdString dbId) $ encode doc
---   deleteDocument docId = do
---     let (dbId :: dbId) = wrapDocumentId docId
---     batchDeleteState $ dbIdString dbId
+class DatabaseIndex idx where
+  getIndexId :: idx -> String
+
+class Ord idx <= IndexedDocument doc idx | doc -> idx where
+  getRangeIndexes :: doc -> Map idx Int
+
+class (Monad m, DatabaseId dbId, DatabaseIndex idx) <= MonadIndexedDatabase dbId idx m where
+  getFromRangeIndex :: forall doc docId. DatabaseDocument doc docId => DocumentId dbId docId => idx -> Maybe Int -> Maybe Int -> m (Array doc)
+  putIndexedDocument :: forall doc docId. IndexedDocument doc idx => DatabaseDocument doc docId => DocumentId dbId docId => doc -> m Unit
+  deleteIndexedDocument :: forall doc docId. IndexedDocument doc idx => DatabaseDocument doc docId => DocumentId dbId docId => Proxy doc -> docId -> m Unit
+
+type RangeIndexDocument = Map Int (Array String)
+
+getDocument :: forall dbId doc docId m. DatabaseId dbId => MonadThrow Error m => MonadDatabase dbId m => DatabaseDocument doc docId => DocumentId dbId docId => docId -> m doc
+getDocument = liftEither <<< note (error "document not found") <=< tryGetDocument
 
 convertJsonErrorToError :: forall a. Either JsonDecodeError a -> Either Error a
 convertJsonErrorToError = lmap (error <<< printJsonDecodeError)
 
-  -- getFromIndex index min max = do
-  --   (indexDoc :: IndexPage) <- map decodeJson <<< batchGetState $ getIndexId index
-  --   ?todo
+getFullIndexId :: forall idx. DatabaseIndex idx => idx -> String
+getFullIndexId idx = "idx/" <> getIndexId idx
 
--- class DatabaseIndex idx where
---   getIndexId :: idx -> String
+getFullDbStringId :: forall dbId. DatabaseId dbId => dbId -> String
+getFullDbStringId dbId = "d/" <> dbIdString dbId
 
--- class DatabaseIndexValue idxv  where
---   encodeIndexValue :: idxv -> Json
---   decodeIndexValue :: forall v. Ord v => Json -> v
-
--- class (Monad m, DatabaseId docId, DatabaseIndex idx, DatabaseIndexValue idxv) <= MonadIndexedDatabase docId idx idxv m where
---   getFromIndex :: forall doc. DatabaseDocument doc docId => idx -> Maybe idxv -> Maybe idxv -> m (Array doc)
-
--- instance testIndexedInstance :: (MonadTransactionalStorage m, MonadThrow Error m, DatabaseId docId) => MonadIndexedDatabase docId m where
---   getFromIndex index min max = do
---     (indexDoc :: IndexPage) <- map decodeJson <<< batchGetState $ getIndexId index
-
-
--- type IndexPage = Map Json (Array String)
+instance monadDatabaseInstances :: (MonadTransactionalStorage m, MonadThrow Error m, DatabaseId dbId) => MonadDatabase dbId m where
+  tryGetDocument id = do
+    let (dbId :: dbId) =  wrapDocumentId id
+    jsonState <- batchTryGetState <<< getFullDbStringId $ dbId
+    pure $ hush <<< decode =<< jsonState
+  putDocument doc = do
+    let (dbId :: dbId) = wrapDocumentId $ getDocumentId doc
+    batchPutState (getFullDbStringId dbId) $ encode doc
+  deleteDocument docId = do
+    let (dbId :: dbId) = wrapDocumentId docId
+    batchDeleteState $ getFullDbStringId dbId
 
 
--- class (Monad m, DocumentId docId schema) <= MonadDatabase schema docId idx idxv m | schema -> docId, schema -> idx, idx -> idxv where
---   getDocument :: forall a. SchemaDocument a schema => DocumentId docId schema => docId -> m a
---   getFromIndex :: forall a. DocumentIndex idx idxv schema => idx -> Maybe idxv -> Maybe idxv -> m (Array a)
-  -- putUniqueDocument :: forall a. UniqueDocument a => a -> m Unit
-  -- putDocument :: forall a. DocumentCollection a => a -> m Unit
+test :: forall t196 t197.
+  IndexedDocument t196 t197 => t196
+                               -> Map t197
+                                    (Array
+                                       { delete :: Boolean
+                                       , value :: Int
+                                       }
+                                    )
+test = map (singleton <<< { delete: true, value: _ }) <<< getRangeIndexes
 
---getFromIndex :: forall a b v. DocumentIndex a b v => b -> Maybe v -> Maybe v -> m (Array a)
+instance monadIndexedDatabaseInstances :: (MonadTransactionalStorage m, MonadThrow Error m, DatabaseId dbId, DatabaseIndex idx, MonadDatabase dbId m) => MonadIndexedDatabase dbId idx m where
+  getFromRangeIndex index min max = do
+    (indexDoc :: RangeIndexDocument) <- liftEither <=< map (convertJsonErrorToError <<< decodeJson) <<< batchGetState $ getFullIndexId index
+    let (ids :: Array String) = foldSubmap min max (\_k v -> v) indexDoc
+    let (dbIds :: Array dbId) = filterMap dbIdFromString ids
+    sequence $ getDocument <$> filterMap tryUnwrapDocumentId dbIds
+  putIndexedDocument :: forall doc docId. IndexedDocument doc idx => DatabaseDocument doc docId => DocumentId dbId docId => doc -> m Unit
+  putIndexedDocument newDoc = do
+    (prevDoc :: Maybe doc) <- tryGetDocument <<< getDocumentId $ newDoc
+    updateIndexes prevDoc newDoc
+    putDocument newDoc
+      where
+        updateIndexes :: Maybe doc -> doc -> m Unit
+        updateIndexes prevDoc doc = do
+          let prevIndexes = (map (singleton <<< { delete: true, value: _ }) <<< getRangeIndexes) <$> prevDoc
+          let indexes = singleton <<< { delete: false, value: _ } <$> getRangeIndexes doc
+          let allUpdates = case prevIndexes of
+                Just x -> intersectionWith union x indexes
+                Nothing -> indexes
+          let (docId :: docId) = getDocumentId doc
+          let (dbId :: dbId) = wrapDocumentId docId
+          let id = dbIdString dbId
+          void <$> sequence $ mapWithIndex (updateIndex id) allUpdates
+        updateIndex :: String -> idx -> Array { delete :: Boolean, value :: Int } -> m Unit
+        updateIndex docId idx updates = do
+          let indexId = getFullIndexId idx
+          (indexDoc :: RangeIndexDocument) <- liftEither <=< map (convertJsonErrorToError <<< decodeJson) <<< batchGetState $ indexId
+          let updatedDoc = foldl (applyUpdates docId) indexDoc updates
+          batchPutState indexId (encodeJson updatedDoc)
+        applyUpdates docId index = case _ of
+          { delete: true, value: x } -> alter (removeAndDeleteIfEmpty docId) x index
+          { delete: false, value: x } -> alter (insertOrUpdate docId) x index
+        removeAndDeleteIfEmpty docId = case _ of
+          Nothing -> Nothing
+          Just [x] | eq docId x -> Nothing
+          Just x -> Just $ delete docId x
+        insertOrUpdate docId = case _ of
+          Nothing -> Just [docId]
+          Just x | elem docId x -> Just x
+          Just x -> Just $ insert docId x
+  deleteIndexedDocument :: forall doc docId. IndexedDocument doc idx => DatabaseDocument doc docId => DocumentId dbId docId => Proxy doc -> docId -> m Unit
+  deleteIndexedDocument _ docId = do
+    (d :: Maybe doc) <- tryGetDocument docId
+    case d of
+      Just doc -> do
+        let (dbId :: dbId) = wrapDocumentId docId
+        let id = dbIdString dbId
+        let indexes = getRangeIndexes doc
+        void <$> sequence $ mapWithIndex (removeFromIndex id) indexes
+          where
+            removeFromIndex idToRemove idx v = do
+              let indexId = getFullIndexId idx
+              (indexDoc :: RangeIndexDocument) <- liftEither <=< map (convertJsonErrorToError <<< decodeJson) <<< batchGetState $ indexId
+              let updatedDoc = alter (removeAndDeleteIfEmpty idToRemove) v indexDoc
+              batchPutState indexId (encodeJson updatedDoc)
+            removeAndDeleteIfEmpty id = case _ of
+              Nothing -> Nothing
+              Just [x] | eq id x -> Nothing
+              Just x -> Just $ delete id x
+      Nothing -> pure unit
 
--- class DocumentCollection d where
---   getDocumentId :: d -> DocumentId
 
--- class DocumentIndex d idx idxv | idx -> d, idx -> idxv where
---   getIndexDocumentId :: idx -> DocumentId
---   getValue :: idx -> d -> idxv
---   getIndex :: idxv -> idx
-
-
--- class Monad m <= MonadDatabase schema m where
---   getUniqueDocument :: forall a. UniqueDocument schema a => m (Maybe a)
---   getDocument :: forall a. DocumentCollection a => m (Array a)
---   getFromIndex :: forall a b v. DocumentIndex a b v => b -> Maybe v -> Maybe v -> m (Array a)
---   putUniqueDocument :: forall a. UniqueDocument a => a -> m Unit
---   putDocument :: forall a. DocumentCollection a => a -> m Unit
-
-
--- testGetFromIndex :: forall a b v m. Monad m => DocumentCollection b => DocumentIndex a b v => b -> Maybe v -> Maybe v -> m (Array a)
--- testGetFromIndex idx min maxExcl = do
---   let indexId = getIndexDocumentId idx
---   ?todo
-
--- data LedgerSchema
---   = Ledger LedgerDocument
---   | AccountCollection AccountDocument
-
--- data TestIndex
---   = DateIndex
---   | CreatorIndex
-
--- data TestIndexValue
---   = DateIndexValue String
---   | CreatorIndexValue String
-
--- newtype TestDocument = TestDocument
---   { id :: String
---   , date :: String
---   , creator :: String
---   , nonIndexed:: String
---   }
-
--- instance documentCollectionTestDocument :: DocumentCollection TestDocument where
---   getDocumentId (TestDocument x) = ?todo
-
--- instance documentIndexTestDocument :: DocumentIndex TestDocument TestIndex TestIndexValue where
---   getIndexDocumentId DateIndex = IndexCollection <<< TransactionIndex <<< indexId $ "Date"
---   getIndexDocumentId CreatorIndex = IndexCollection <<< TransactionIndex <<< indexId $  "Creator"
---   getValue CreatorIndex (TestDocument x)= CreatorIndexValue <<<  _.creator $ x
---   getValue DateIndex (TestDocument x) = DateIndexValue <<< _.date $ x
---   getIndex (CreatorIndexValue _) = CreatorIndex
---   getIndex (DateIndexValue _) = DateIndex
-
-
-
--- -- class DocumentIndexRecord :: RL.RowList Type -> Row Type -> Row Type -> Constraint
--- -- class DocumentIndexRecord rowlist row subrow | rowlist -> subrow where
--- --   appendRecord :: Proxy rowlist -> Record row -> Record row -> Record subrow
-
--- -- instance documentIndexRecordNil :: DocumentIndexRecord RL.Nil row () where
--- --   appendRecord _ _ _ = {}
-
--- -- instance documentIndexRecordCons ::
--- --   ( IsSymbol key
--- --   , Row.Cons key focus subrowTail subrow
--- --   , DocumentIndexRecord rowlistTail row subrowTail
--- --   , Semigroup focus
--- --   ) =>
--- --   DocumentIndexRecord (RL.Cons key focus rowlistTail) row subrow where
--- --   appendRecord _ ra rb = insert (get ra <> get rb) tail
--- --     where
--- --     key = reflectSymbol (Proxy :: Proxy key)
--- --     get = unsafeGet key :: Record row -> focus
--- --     insert = unsafeSet key :: focus -> Record subrowTail -> Record subrow
--- --     tail = appendRecord (Proxy :: Proxy rowlistTail) ra rb

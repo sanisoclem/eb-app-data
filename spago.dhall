@@ -26,6 +26,7 @@ to generate this file without the comments in this block.
   , "effect"
   , "either"
   , "exceptions"
+  , "filterable"
   , "foldable-traversable"
   , "foreign-object"
   , "identity"
