@@ -2,17 +2,21 @@ module Main where
 
 import Prelude
 
-import AppM (runAppM, mkContext)
+import AppM (AppM, runAppM, mkContext)
 import Capability.Fetch (getBodyJson, getRequestMethod)
 import Capability.Storage.Transactional (batchOperation)
+import Control.Monad.Error.Class (catchError)
 import Control.Promise (Promise, fromAff)
-import Data.Fetch (RequestMethod(..), messageResponse, notFoundResponse, toDurableObjectResponse)
+import Data.Fetch (RequestMethod(..), Response, errorResponse, messageResponse, notFoundResponse, toDurableObjectResponse)
 import Effect (Effect)
 import FFI.DurableObject (DurableObjectRequest, DurableObjectResponse, DurableObjectState)
 import Handlers.Ledger (handleCommand)
 
+toResponse :: AppM Response -> AppM DurableObjectResponse
+toResponse x = toDurableObjectResponse <$> catchError x (pure <<< errorResponse)
+
 ledgerFetchMain :: DurableObjectState -> DurableObjectRequest -> Effect (Promise DurableObjectResponse)
-ledgerFetchMain state req = fromAff $ runAppM (mkContext state req) $ toDurableObjectResponse <$> do
+ledgerFetchMain state req = fromAff $ runAppM (mkContext state req) $ toResponse do
   getRequestMethod >>= case _ of
     POST -> do
       cmd <- getBodyJson
@@ -21,4 +25,5 @@ ledgerFetchMain state req = fromAff $ runAppM (mkContext state req) $ toDurableO
       -- TODO; schedule an alarm
     GET -> pure $ notFoundResponse "Query not yet implemented"
     _ -> pure $ notFoundResponse "not found"
+
 
