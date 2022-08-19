@@ -21,6 +21,7 @@ to generate this file without the comments in this block.
   , "arrays"
   , "bifunctors"
   , "console"
+  , "control"
   , "datetime"
   , "decimals"
   , "effect"
@@ -40,6 +41,7 @@ to generate this file without the comments in this block.
   , "strings"
   , "transformers"
   , "tuples"
+  , "typelevel-prelude"
   , "uri"
   , "uuid"
   ]

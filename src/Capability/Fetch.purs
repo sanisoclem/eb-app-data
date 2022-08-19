@@ -6,7 +6,7 @@ import Capability.Codec (class Decodable, decode)
 import Control.Monad.Error.Class (class MonadThrow, liftEither)
 import Data.Argonaut (jsonParser)
 import Data.Bifunctor (lmap)
-import Data.Request (RequestMethod)
+import Data.Fetch (RequestMethod)
 import Effect.Exception (Error, error)
 
 class Monad m <= MonadFetchRequest m where

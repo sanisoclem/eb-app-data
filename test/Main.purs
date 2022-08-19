@@ -5,17 +5,16 @@ import Prelude
 import Effect (Effect)
 import Effect.Aff (Aff, launchAff_)
 import Test.Spec (SpecT, describe, pending)
+import Test.Spec as Spec
 import Test.Spec.Reporter (consoleReporter)
-import Test.Spec.Runner (runSpec)
+import Test.Spec.Runner (defaultConfig, runSpecT)
+import Test.TestM (TestM, mkTestData, runTestM)
 
--- it :: ∀ m. Monad m => String -> TestM Unit -> SpecT Aff Unit m Unit
--- it desc = Spec.it desc <<< runTestM mkTestData
-
--- main :: Effect Unit
--- main = launchAff_ <<< void <<< identity <=< runSpecT defaultConfig [consoleReporter] $ testSpec
+it :: ∀ m. Monad m => String -> TestM Unit -> SpecT Aff Unit m Unit
+it desc = Spec.it desc <<< runTestM mkTestData
 
 main :: Effect Unit
-main = launchAff_ <<< runSpec [consoleReporter] $ testSpec
+main = launchAff_ <<< void <<< identity <=< runSpecT defaultConfig [consoleReporter] $ testSpec
 
 testSpec ∷ ∀ m. Monad m => SpecT Aff Unit m Unit
 testSpec = do

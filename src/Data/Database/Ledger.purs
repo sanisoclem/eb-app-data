@@ -3,6 +3,7 @@ module Data.Database.Ledger  where
 import Prelude
 
 import Capability.Storage.Database (class DatabaseDocument, class DatabaseId, class DatabaseIndex, class DocumentId, class IndexedDocument)
+import Capability.Utility (convertJsonErrorToError)
 import Control.Alternative ((<|>))
 import Data.Argonaut (decodeJson, encodeJson)
 import Data.Common (AccountId, AccountType(..), Denomination, LedgerId, TransactionId, accountId, ledgerId, transactionId, unAccountId, unTransactionId)
@@ -65,8 +66,8 @@ ledgerDocument :: LedgerDocumentRecord -> LedgerDocument
 ledgerDocument = coerce
 instance DatabaseDocument LedgerDocument LedgerId where
   getDocumentId _ = ledgerId
-  decode json = LedgerDocument <$> decodeJson json
-  encode (LedgerDocument ledger) = encodeJson ledger
+  decodeDocument json = convertJsonErrorToError <<< map LedgerDocument $ decodeJson json
+  encodeDocument (LedgerDocument ledger) = encodeJson ledger
 
 type AccountDocumentRecord =
   { accountId :: AccountId
@@ -83,8 +84,8 @@ accountDocument :: AccountDocumentRecord -> AccountDocument
 accountDocument = coerce
 instance DatabaseDocument AccountDocument AccountId where
   getDocumentId (AccountDocument x) = x.accountId
-  decode json = AccountDocument <$> decodeJson json
-  encode (AccountDocument acct) = encodeJson acct
+  decodeDocument json = convertJsonErrorToError <<< map AccountDocument $ decodeJson json
+  encodeDocument (AccountDocument acct) = encodeJson acct
 
 debitAccount :: Money -> AccountDocumentRecord -> AccountDocumentRecord
 debitAccount amount account = case account.accountType of
@@ -111,7 +112,7 @@ transactionDocument :: TransactionDocumentRecord -> TransactionDocument
 transactionDocument = coerce
 instance DatabaseDocument TransactionDocument TransactionId where
   getDocumentId (TransactionDocument x) = x.transactionId
-  decode json = TransactionDocument <$> decodeJson json
-  encode (TransactionDocument tx) = encodeJson tx
+  decodeDocument json = convertJsonErrorToError <<< map TransactionDocument $ decodeJson json
+  encodeDocument (TransactionDocument tx) = encodeJson tx
 instance IndexedDocument TransactionDocument LedgerIndexes where
   getRangeIndexes (TransactionDocument doc) = singleton TransactionSortKey doc.sortKey

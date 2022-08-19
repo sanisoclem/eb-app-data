@@ -1,7 +1,13 @@
 module Data.Command.Ledger where
 
+import Prelude
 
+import Capability.Codec (class Decodable, class Encodable)
+import Capability.Utility (convertJsonErrorToError)
+import Data.Argonaut.Decode.Generic (genericDecodeJson)
+import Data.Argonaut.Encode.Generic (genericEncodeJson)
 import Data.Common (AccountId, AccountType, Denomination, TransactionId)
+import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
 import Data.Money (Money)
 
@@ -35,3 +41,9 @@ data LedgerCommand
       , notes :: String
       }
   | DeleteTransaction TransactionId
+
+derive instance Generic LedgerCommand _
+instance Encodable LedgerCommand where
+  encode = genericEncodeJson
+instance Decodable LedgerCommand where
+  decode = convertJsonErrorToError <<< genericDecodeJson

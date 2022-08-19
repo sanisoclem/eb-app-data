@@ -1,11 +1,12 @@
 module Capability.Storage.Database where
 
 import Prelude
-import Control.Monad.Error.Class (class MonadThrow, liftEither)
+
 import Capability.Storage.Transactional (class MonadTransactionalStorage, batchDeleteState, batchGetState, batchPutState, batchTryGetState)
-import Data.Argonaut (Json, JsonDecodeError, decodeJson, encodeJson, printJsonDecodeError)
+import Capability.Utility (convertJsonErrorToError)
+import Control.Monad.Error.Class (class MonadThrow, liftEither)
+import Data.Argonaut (Json, decodeJson, encodeJson)
 import Data.Array (delete, elem, foldl, insert, singleton, union)
-import Data.Bifunctor (lmap)
 import Data.Either (Either, hush, note)
 import Data.Filterable (filterMap)
 import Data.FunctorWithIndex (mapWithIndex)
@@ -25,8 +26,8 @@ class DocumentId dbId docId where
 
 class DatabaseDocument doc docId | doc -> docId where
   getDocumentId :: doc -> docId
-  decode :: Json -> Either JsonDecodeError doc
-  encode :: doc -> Json
+  decodeDocument :: Json -> Either Error doc
+  encodeDocument :: doc -> Json
 
 class (Monad m, DatabaseId dbId) <= MonadDatabase dbId m | m -> dbId where
   tryGetDocument :: forall doc docId. DatabaseDocument doc docId => DocumentId dbId docId => docId -> m (Maybe doc)
@@ -49,9 +50,6 @@ type RangeIndexDocument = Map Int (Array String)
 getDocument :: forall dbId doc docId m. DatabaseId dbId => MonadThrow Error m => MonadDatabase dbId m => DatabaseDocument doc docId => DocumentId dbId docId => docId -> m doc
 getDocument = liftEither <<< note (error "document not found") <=< tryGetDocument
 
-convertJsonErrorToError :: forall a. Either JsonDecodeError a -> Either Error a
-convertJsonErrorToError = lmap (error <<< printJsonDecodeError)
-
 getFullIndexId :: forall idx. DatabaseIndex idx => idx -> String
 getFullIndexId idx = "idx/" <> getIndexId idx
 
@@ -62,24 +60,13 @@ instance monadDatabaseInstances :: (MonadTransactionalStorage m, MonadThrow Erro
   tryGetDocument id = do
     let (dbId :: dbId) =  wrapDocumentId id
     jsonState <- batchTryGetState <<< getFullDbStringId $ dbId
-    pure $ hush <<< decode =<< jsonState
+    pure $ hush <<< decodeDocument =<< jsonState
   putDocument doc = do
     let (dbId :: dbId) = wrapDocumentId $ getDocumentId doc
-    batchPutState (getFullDbStringId dbId) $ encode doc
+    batchPutState (getFullDbStringId dbId) $ encodeDocument doc
   deleteDocument docId = do
     let (dbId :: dbId) = wrapDocumentId docId
     batchDeleteState $ getFullDbStringId dbId
-
-
-test :: forall t196 t197.
-  IndexedDocument t196 t197 => t196
-                               -> Map t197
-                                    (Array
-                                       { delete :: Boolean
-                                       , value :: Int
-                                       }
-                                    )
-test = map (singleton <<< { delete: true, value: _ }) <<< getRangeIndexes
 
 instance monadIndexedDatabaseInstances :: (MonadTransactionalStorage m, MonadThrow Error m, DatabaseId dbId, DatabaseIndex idx, MonadDatabase dbId m) => MonadIndexedDatabase dbId idx m where
   getFromRangeIndex index min max = do
@@ -141,5 +128,4 @@ instance monadIndexedDatabaseInstances :: (MonadTransactionalStorage m, MonadThr
               Just [x] | eq id x -> Nothing
               Just x -> Just $ delete id x
       Nothing -> pure unit
-
 

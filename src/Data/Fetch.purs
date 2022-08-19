@@ -1,4 +1,4 @@
-module Data.Response where
+module Data.Fetch where
 
 import Prelude
 
@@ -8,6 +8,14 @@ import Data.Tuple (Tuple(..))
 import Effect.Aff (Error)
 import FFI.DurableObject (DurableObjectResponse, doStringResponse)
 import Foreign.Object (fromFoldable)
+
+
+data RequestMethod
+  = GET
+  | POST
+  | DELETE
+  | PUT
+  | Unknown String
 
 toDurableObjectResponse :: Response -> DurableObjectResponse
 toDurableObjectResponse x = doStringResponse (stringify x.body) x.statusCode
