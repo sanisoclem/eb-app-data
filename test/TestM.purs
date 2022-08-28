@@ -1,14 +1,25 @@
-module Test.TestM where
+module Test.TestM
+  ( TestData
+  , TestM
+  , mkTestData
+  , runTestM
+  , testNow
+  )
+  where
 
 import Prelude
 
-import Capability.Fetch (class MonadFetchRequest)
-import Capability.Has (class HasGetter, getter)
+import Capability.Has (class HasGetter, class HasSetter, getter, setter)
+import Capability.Now (class MonadNow, nowUtc)
+import Capability.Storage.Cf (class MonadCfStorage)
+import Capability.Storage.Outbox (outboxDocumentId)
+import Capability.Storage.Transactional (class MonadTransactionalStorage)
 import Control.Monad.Error.Class (class MonadError, class MonadThrow)
 import Control.Monad.State (class MonadState, StateT, gets, modify_, runStateT)
-import Data.Argonaut (Json, stringify)
-import Data.Fetch (RequestMethod(..))
-import Data.Map (Map, empty)
+import Data.Argonaut (Json)
+import Data.Argonaut.Core as JSON
+import Data.Instant (Instant(..), mkInstant)
+import Data.Map (Map, delete, empty, insert, lookup)
 import Data.Tuple (fst)
 import Effect.Aff (Aff, Error)
 import Effect.Aff.Class (class MonadAff)
@@ -29,35 +40,42 @@ derive newtype instance monadThrowTestM :: MonadThrow Error TestM
 derive newtype instance monadErrorTestM :: MonadError Error TestM
 derive newtype instance monadEffectTestM :: MonadEffect TestM
 derive newtype instance monadAffTestM :: MonadAff TestM
-derive newtype instance monadAskTestM :: MonadState TestData TestM
+derive newtype instance monadStateTestM :: MonadState TestData TestM
 
-instance MonadFetchRequest TestM where
-  getRequestMethod = gets getter
-  getBodyString = gets getter
+instance MonadTransactionalStorage TestM where
+  batchTryGetState key = lookup key <$> gets getter
+  batchPutState k v = modify_ (setter $ insert k v)
+  batchDeleteState k = modify_ $ setter (\(m :: Map String Json) -> delete k m)
+
+instance MonadCfStorage TestM where
+  tryGetState key = lookup key <$> gets getter
+  putState k v = modify_ (setter $ insert k v)
+  deleteState k = modify_ $ setter (\(m :: Map String Json) -> delete k m)
+
+instance MonadNow TestM where
+  nowUtc = gets getter
 
 data TestData = TestData
-  { requestMethod :: RequestMethod
-  , requestBody :: String
-  , data :: Map String Json
+  { data :: Map String Json
+  , nowUtc :: Instant
   }
+
+testNow :: Instant
+testNow = mkInstant 735462
 
 mkTestData ∷ TestData
 mkTestData = TestData
-  { requestMethod: POST
-  , requestBody: ""
-  , data: empty
+  { data:
+      insert outboxDocumentId (JSON.fromArray [])
+        $ empty
+  , nowUtc: testNow
   }
 
-setRequest
-  :: ∀ m
-   . MonadState TestData m
-  => RequestMethod
-  -> Json
-  -> m Unit
-setRequest method body = modify_ (\(TestData t) -> TestData t { requestBody = stringify body, requestMethod = method })
+instance HasGetter (Map String Json) TestData where
+  getter (TestData x) = x.data
 
-instance HasGetter RequestMethod TestData where
-  getter (TestData x) = x.requestMethod
+instance HasGetter Instant TestData where
+  getter (TestData x) = x.nowUtc
 
-instance HasGetter String TestData where
-  getter (TestData x) = x.requestBody
+instance HasSetter (Map String Json) TestData where
+  setter fn (TestData x) = TestData x { data = fn x.data }

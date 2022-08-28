@@ -2,6 +2,8 @@ module Capability.Storage.Transactional where
 
 import Prelude
 
+import Capability.Has (setter, class HasSetter)
+import Capability.Now (class MonadNow, nowUtc)
 import Capability.Storage.Cf (class MonadCfStorage, class MonadCfStorageBatch, runBatch, tryGetState)
 import Control.Monad.Error.Class (class MonadThrow, liftEither)
 import Control.Monad.State (class MonadState, StateT, get, modify_, runStateT)
@@ -21,16 +23,19 @@ type PutOperation = { docId :: String, body :: Json }
 newtype BatchOperation = BatchOperation { puts:: Array PutOperation, deletes :: Array String }
 
 newtype TransactionalStorageT m a = TransactionalStorageT (StateT BatchOperation m a)
-derive newtype instance functorTransactionalStorageT :: Functor m => Functor (TransactionalStorageT m)
-derive newtype instance applyTransactionalStorageT :: Monad m =>  Apply (TransactionalStorageT m)
-derive newtype instance applicativeTransactionalStorageT :: Monad m => Applicative (TransactionalStorageT m)
-derive newtype instance bindTransactionalStorageT :: Monad m => Bind (TransactionalStorageT m)
-derive newtype instance monadTransactionalStorageT :: Monad m => Monad (TransactionalStorageT m)
-derive newtype instance monadThrowDurableStorageT :: MonadThrow e m => MonadThrow e (TransactionalStorageT m)
-derive newtype instance monadStateTransactionalStorageT :: Monad m => MonadState BatchOperation (TransactionalStorageT m)
-derive newtype instance monadTransTransactionalStorageT :: MonadTrans TransactionalStorageT
-derive newtype instance monadEffectTransactionalStorageT :: (MonadEffect m) => MonadEffect (TransactionalStorageT m)
-derive newtype instance monadAffTransactionalStorageT :: (MonadAff m) => MonadAff (TransactionalStorageT m)
+derive newtype instance Functor m => Functor (TransactionalStorageT m)
+derive newtype instance Monad m =>  Apply (TransactionalStorageT m)
+derive newtype instance Monad m => Applicative (TransactionalStorageT m)
+derive newtype instance Monad m => Bind (TransactionalStorageT m)
+derive newtype instance Monad m => Monad (TransactionalStorageT m)
+derive newtype instance MonadThrow e m => MonadThrow e (TransactionalStorageT m)
+derive newtype instance Monad m => MonadState BatchOperation (TransactionalStorageT m)
+derive newtype instance MonadTrans TransactionalStorageT
+derive newtype instance (MonadEffect m) => MonadEffect (TransactionalStorageT m)
+derive newtype instance (MonadAff m) => MonadAff (TransactionalStorageT m)
+
+instance (MonadNow m) => MonadNow (TransactionalStorageT m) where
+  nowUtc = lift nowUtc
 
 batchOperation :: ∀ m a. MonadCfStorageBatch m => TransactionalStorageT m a -> m a
 batchOperation m = do
@@ -46,8 +51,6 @@ batchPutState' id doc = modify_ <<< setter $ (:) { docId: id, body: doc }
 
 batchDeleteState' :: ∀ m. Monad m => String -> TransactionalStorageT m Unit
 batchDeleteState' id = modify_ <<< setter $ (:) id
-  where
-    setter fn (BatchOperation x) = BatchOperation x { deletes = fn x.deletes }
 
 batchTryGetState' :: ∀ m. MonadCfStorage m => String -> TransactionalStorageT m (Maybe Json)
 batchTryGetState' key = do
@@ -69,6 +72,11 @@ instance monadTransactionalStorageTransactionalStorageT :: (Monad m, MonadCfStor
   batchPutState = batchPutState'
   batchDeleteState = batchDeleteState'
 
+-- instance HasSetter (Array PutOperation) BatchOperation where
+--   setter fn (BatchOperation x) = BatchOperation x { puts = fn x.puts }
+
+instance HasSetter (Array String) BatchOperation where
+  setter fn (BatchOperation x) = BatchOperation x { deletes = fn x.deletes }
 
 batchGetState :: ∀ m. (MonadThrow Error m) => (MonadTransactionalStorage m) => String -> m Json
 batchGetState key = batchTryGetState key >>= note (error $ "state not found: " <> key) >>> liftEither

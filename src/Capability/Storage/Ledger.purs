@@ -13,7 +13,7 @@ import Effect.Exception (Error)
 import Type.Prelude (Proxy(..))
 
 class Monad m <= MonadLedgerDb m where
-  getLedger :: m LedgerDocumentRecord
+  getLedger :: m (Maybe LedgerDocumentRecord)
   putLedger :: LedgerDocumentRecord -> m Unit
   getAccount :: AccountId -> m AccountDocumentRecord
   putAccount :: AccountDocumentRecord -> m Unit
@@ -23,7 +23,7 @@ class Monad m <= MonadLedgerDb m where
   deleteTransaction :: TransactionId -> m Unit
 
 instance (Monad m, MonadThrow Error m, MonadDatabase LedgerDatabaseId m, MonadIndexedDatabase LedgerDatabaseId LedgerIndexes m, MonadTransactionalStorage m) => MonadLedgerDb m where
-  getLedger = unLedgerDocument <$> getDocument ledgerId
+  getLedger = map unLedgerDocument <$> tryGetDocument ledgerId
   putLedger = putDocument <<< ledgerDocument
   getAccount accountId = unAccountDocument <$> getDocument accountId
   putAccount = putDocument <<< accountDocument

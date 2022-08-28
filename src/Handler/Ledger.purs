@@ -5,8 +5,9 @@ module Handlers.Ledger
 
 import Prelude
 
-import Capability.Storage.Ledger (class MonadLedgerDb, deleteTransaction, getAccount, getLedger, getTransaction, postTransaction, putAccount, putLedger, putTransaction)
+import Capability.Now (class MonadNow, nowUtc)
 import Capability.RandomId (generateId)
+import Capability.Storage.Ledger (class MonadLedgerDb, deleteTransaction, getAccount, getLedger, getTransaction, postTransaction, putAccount, putLedger, putTransaction)
 import Capability.Storage.Outbox (class MonadOutbox, queue)
 import Capability.Utility (ensure)
 import Control.Monad.Error.Class (class MonadThrow)
@@ -14,7 +15,7 @@ import Data.Command.Ledger (LedgerCommand(..))
 import Data.Common (AccountId)
 import Data.Database.Ledger (creditAccount, debitAccount)
 import Data.Event.Ledger (LedgerEvent(..))
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe(..))
 import Data.Money (Money, zeroMoney)
 import Data.Query.Ledger (LedgerQuery(..))
 import Data.Traversable (sequence)
@@ -27,11 +28,17 @@ handleCommand
   => MonadOutbox LedgerEvent m
   => MonadThrow Error m
   => MonadEffect m
+  => MonadNow m
   => LedgerCommand
   -> m Unit
 handleCommand = case _ of
     UpdateLedger x -> do
-      putLedger =<< _ { name = x.name } <$> getLedger
+      ledger <- getLedger
+      createdAt <- nowUtc
+      putLedger $
+        case ledger of
+          Just l -> l { name = x.name }
+          _ -> { name: x.name, createdAt }
       queue LedgerUpdated
     CreateAccount x -> do
       accountId <- generateId
