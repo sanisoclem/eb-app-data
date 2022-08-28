@@ -29,6 +29,8 @@ foreign import data DurableObjectState :: Type
 foreign import data DurableObjectResponse :: Type
 
 foreign import doStringResponse :: String -> Int -> DurableObjectResponse
+foreign import testReq :: String -> DurableObjectRequest
+foreign import testState :: Unit -> DurableObjectState
 
 newtype BatchedPut = BatchedPut
   { id :: String

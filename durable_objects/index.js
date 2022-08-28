@@ -1,22 +1,17 @@
-export * from './ledger'
+export * from "./ledger";
 
 export default {
-    async fetch(request, env) {
-        if (request.method !== "POST") {
-            return new Response("Method Not Allowed", {status: 405})
-        }
-
-        // parse the URL and get Durable Object ID from the URL
-        const url = new URL(request.url)
-        const idFromUrl = url.pathname.slice(1)
-
-        // construct the Durable Object ID, use the ID from pathname or create a new unique id
-        const doId = idFromUrl ? env.DO_REQUEST.idFromString(idFromUrl) : env.DO_REQUEST.newUniqueId()
-
-        // get the Durable Object stub for our Durable Object instance
-        const stub = env.DO_REQUEST.get(doId)
-
-        // pass the request to Durable Object instance
-        return stub.fetch(request)
-    },
-}
+  async fetch(request, env) {
+    if (request.method === "POST") {
+      const id = env.EB_LEDGER_DO.newUniqueId();
+      return new Response(id.toString());
+    } else if (request.method === "PUT") {
+      const url = new URL(request.url);
+      const doId = env.EB_LEDGER_DO.idFromString(url.pathname.slice(1));
+      const stub = env.EB_LEDGER_DO.get(doId);
+      return stub.fetch(request);
+    } else {
+      return new Response("Method Not Allowed", { status: 405 });
+    }
+  },
+};

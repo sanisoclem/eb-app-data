@@ -18,12 +18,10 @@ toResponse x = toDurableObjectResponse <$> catchError x (pure <<< errorResponse)
 ledgerFetchMain :: DurableObjectState -> DurableObjectRequest -> Effect (Promise DurableObjectResponse)
 ledgerFetchMain state req = fromAff $ runAppM (mkContext state req) $ toResponse do
   getRequestMethod >>= case _ of
-    POST -> do
+    PUT -> do
       cmd <- getBodyJson
       batchOperation $ handleCommand cmd
       pure $ messageResponse 200 "OK"
       -- TODO; schedule an alarm
     GET -> pure $ notFoundResponse "Query not yet implemented"
     _ -> pure $ notFoundResponse "not found"
-
-

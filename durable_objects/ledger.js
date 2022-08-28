@@ -7,7 +7,7 @@ export class Ledger {
   }
 
   async fetch(request) {
-    await ledgerFetchMain(this.state)(request)();
+    return await ledgerFetchMain(this.state.storage)(request)();
   }
 }
 
