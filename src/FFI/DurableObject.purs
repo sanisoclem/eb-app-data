@@ -9,6 +9,8 @@ module FFI.DurableObject
   , doPutState
   , doRequestGetBody
   , doRequestGetMethod
+  , doRequestGetParam
+  , doRequestGetPath
   , doStringResponse
   , mkBatchedPut
   )
@@ -41,6 +43,11 @@ mkBatchedPut id document = BatchedPut { id, document }
 
 foreign import doRequestGetMethod :: DurableObjectRequest -> String
 
+foreign import doRequestGetPath :: DurableObjectRequest -> String
+
+doRequestGetParam :: DurableObjectRequest -> String -> Maybe String
+doRequestGetParam = doRequestGetParamImpl Just Nothing
+
 doRequestGetBody :: DurableObjectRequest -> Aff String
 doRequestGetBody = doRequestGetBodyImpl >>> toAffE
 
@@ -62,3 +69,4 @@ foreign import doGetStateImpl :: (∀ a. a -> Maybe a) -> (∀ a. Maybe a) -> Du
 foreign import doPutStateImpl :: DurableObjectState -> String -> Json -> Effect (Promise Unit)
 foreign import doDeleteStateImpl :: DurableObjectState -> String -> Effect (Promise Unit)
 foreign import doBatchStateImpl :: DurableObjectState -> Array String -> Array BatchedPut -> Effect (Promise Unit)
+foreign import doRequestGetParamImpl :: (∀ a. a -> Maybe a) -> (∀ a. Maybe a) -> DurableObjectRequest -> String -> Maybe String

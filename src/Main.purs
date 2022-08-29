@@ -3,14 +3,14 @@ module Main where
 import Prelude
 
 import AppM (AppM, runAppM, mkContext)
-import Capability.Fetch (getBodyJson, getRequestMethod)
+import Capability.Fetch (fromRequest, getBodyJson, getPath, getRequestMethod)
 import Capability.Storage.Transactional (batchOperation)
 import Control.Monad.Error.Class (catchError)
 import Control.Promise (Promise, fromAff)
-import Data.Fetch (RequestMethod(..), Response, errorResponse, messageResponse, notFoundResponse, toDurableObjectResponse)
+import Data.Fetch (RequestMethod(..), Response, errorResponse, jsonResponse, messageResponse, notFoundResponse, toDurableObjectResponse)
 import Effect (Effect)
 import FFI.DurableObject (DurableObjectRequest, DurableObjectResponse, DurableObjectState)
-import Handlers.Ledger (handleCommand)
+import Handlers.Ledger (handleCommand, handleQuery)
 
 toResponse :: AppM Response -> AppM DurableObjectResponse
 toResponse x = toDurableObjectResponse <$> catchError x (pure <<< errorResponse)
@@ -19,9 +19,12 @@ ledgerFetchMain :: DurableObjectState -> DurableObjectRequest -> Effect (Promise
 ledgerFetchMain state req = fromAff $ runAppM (mkContext state req) $ toResponse do
   getRequestMethod >>= case _ of
     PUT -> do
-      cmd <- getBodyJson
+      cmd <- fromRequest
       batchOperation $ handleCommand cmd
       pure $ messageResponse 200 "OK"
       -- TODO; schedule an alarm
-    GET -> pure $ notFoundResponse "Query not yet implemented"
+    GET -> do
+      qry <- fromRequest
+      result <- handleQuery qry
+      pure $ jsonResponse 200 result
     _ -> pure $ notFoundResponse "not found"

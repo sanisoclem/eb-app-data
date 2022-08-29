@@ -2,6 +2,7 @@ module Capability.Storage.Database where
 
 import Prelude
 
+import Capability.Storage.Cf (class MonadCfStorage, getState, tryGetState)
 import Capability.Storage.Transactional (class MonadTransactionalStorage, batchDeleteState, batchGetState, batchPutState, batchTryGetState)
 import Capability.Utility (convertJsonErrorToError)
 import Control.Monad.Error.Class (class MonadThrow, liftEither)
@@ -29,6 +30,9 @@ class DatabaseDocument doc docId | doc -> docId where
   decodeDocument :: Json -> Either Error doc
   encodeDocument :: doc -> Json
 
+class (Monad m, DatabaseId dbId) <= MonadReadonlyDatabase dbId m | m -> dbId where
+  tryGetDocumentReadonly :: forall doc docId. DatabaseDocument doc docId => DocumentId dbId docId => docId -> m (Maybe doc)
+
 class (Monad m, DatabaseId dbId) <= MonadDatabase dbId m | m -> dbId where
   tryGetDocument :: forall doc docId. DatabaseDocument doc docId => DocumentId dbId docId => docId -> m (Maybe doc)
   putDocument :: forall doc docId. DatabaseDocument doc docId => DocumentId dbId docId => doc -> m Unit
@@ -40,12 +44,18 @@ class DatabaseIndex idx where
 class Ord idx <= IndexedDocument doc idx | doc -> idx where
   getRangeIndexes :: doc -> Map idx Int
 
+class (Monad m, DatabaseId dbId, DatabaseIndex idx) <= MonadReadonlyIndexedDatabase dbId idx m where
+  getFromRangeIndexReadonly :: forall doc docId. DatabaseDocument doc docId => DocumentId dbId docId => idx -> Maybe Int -> Maybe Int -> m (Array doc)
+
 class (Monad m, DatabaseId dbId, DatabaseIndex idx) <= MonadIndexedDatabase dbId idx m where
   getFromRangeIndex :: forall doc docId. DatabaseDocument doc docId => DocumentId dbId docId => idx -> Maybe Int -> Maybe Int -> m (Array doc)
   putIndexedDocument :: forall doc docId. IndexedDocument doc idx => DatabaseDocument doc docId => DocumentId dbId docId => doc -> m Unit
   deleteIndexedDocument :: forall doc docId. IndexedDocument doc idx => DatabaseDocument doc docId => DocumentId dbId docId => Proxy doc -> docId -> m Unit
 
 type RangeIndexDocument = Map Int (Array String)
+
+getDocumentReadonly :: forall dbId doc docId m. DatabaseId dbId => MonadThrow Error m => MonadReadonlyDatabase dbId m => DatabaseDocument doc docId => DocumentId dbId docId => docId -> m doc
+getDocumentReadonly = liftEither <<< note (error "document not found") <=< tryGetDocumentReadonly
 
 getDocument :: forall dbId doc docId m. DatabaseId dbId => MonadThrow Error m => MonadDatabase dbId m => DatabaseDocument doc docId => DocumentId dbId docId => docId -> m doc
 getDocument = liftEither <<< note (error "document not found") <=< tryGetDocument
@@ -56,7 +66,13 @@ getFullIndexId idx = "idx/" <> getIndexId idx
 getFullDbStringId :: forall dbId. DatabaseId dbId => dbId -> String
 getFullDbStringId dbId = "d/" <> dbIdString dbId
 
-instance monadDatabaseInstances :: (MonadTransactionalStorage m, MonadThrow Error m, DatabaseId dbId) => MonadDatabase dbId m where
+instance (MonadCfStorage m, MonadThrow Error m, DatabaseId dbId) => MonadReadonlyDatabase dbId m where
+  tryGetDocumentReadonly id = do
+    let (dbId :: dbId) =  wrapDocumentId id
+    jsonState <- tryGetState <<< getFullDbStringId $ dbId
+    pure $ hush <<< decodeDocument =<< jsonState
+
+instance (MonadTransactionalStorage m, MonadThrow Error m, DatabaseId dbId) => MonadDatabase dbId m where
   tryGetDocument id = do
     let (dbId :: dbId) =  wrapDocumentId id
     jsonState <- batchTryGetState <<< getFullDbStringId $ dbId
@@ -68,7 +84,15 @@ instance monadDatabaseInstances :: (MonadTransactionalStorage m, MonadThrow Erro
     let (dbId :: dbId) = wrapDocumentId docId
     batchDeleteState $ getFullDbStringId dbId
 
-instance monadIndexedDatabaseInstances :: (MonadTransactionalStorage m, MonadThrow Error m, DatabaseId dbId, DatabaseIndex idx, MonadDatabase dbId m) => MonadIndexedDatabase dbId idx m where
+instance (MonadCfStorage m, MonadThrow Error m, DatabaseId dbId, DatabaseIndex idx, MonadReadonlyDatabase dbId m) => MonadReadonlyIndexedDatabase dbId idx m where
+  getFromRangeIndexReadonly index min max = do
+    (indexDoc :: RangeIndexDocument) <- liftEither <=< map (convertJsonErrorToError <<< decodeJson) <<< getState $ getFullIndexId index
+    let (ids :: Array String) = foldSubmap min max (\_k v -> v) indexDoc
+    let (dbIds :: Array dbId) = filterMap dbIdFromString ids
+    sequence $ getDocumentReadonly <$> filterMap tryUnwrapDocumentId dbIds
+
+
+instance (MonadTransactionalStorage m, MonadThrow Error m, DatabaseId dbId, DatabaseIndex idx, MonadDatabase dbId m) => MonadIndexedDatabase dbId idx m where
   getFromRangeIndex index min max = do
     (indexDoc :: RangeIndexDocument) <- liftEither <=< map (convertJsonErrorToError <<< decodeJson) <<< batchGetState $ getFullIndexId index
     let (ids :: Array String) = foldSubmap min max (\_k v -> v) indexDoc

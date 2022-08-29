@@ -18,7 +18,7 @@ import Effect.Aff (Aff, Error)
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Class (class MonadEffect, liftEffect)
 import Effect.Now (now)
-import FFI.DurableObject (DurableObjectRequest, DurableObjectState, doBatchState, doDeleteState, doGetState, doPutState, doRequestGetBody, doRequestGetMethod, mkBatchedPut)
+import FFI.DurableObject (DurableObjectRequest, DurableObjectState, doBatchState, doDeleteState, doGetState, doPutState, doRequestGetBody, doRequestGetMethod, doRequestGetParam, doRequestGetPath, mkBatchedPut)
 import Safe.Coerce (coerce)
 
 newtype AppM a = AppM (StateT ContextData Aff a)
@@ -62,11 +62,15 @@ instance incomingRequestAppM :: MonadFetchRequest AppM where
       "DELETE" -> DELETE
       "PUT" -> PUT
       x -> Unknown x
-
   getBodyString = do
     request <- gets getter
     liftAff <<< doRequestGetBody $ request
-
+  getPath = do
+    req <- gets getter
+    pure $ doRequestGetPath req
+  tryGetParam key = do
+    req <- gets getter
+    pure $ doRequestGetParam req key
 
 instance MonadNow AppM where
   nowUtc = do

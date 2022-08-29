@@ -1,24 +1,14 @@
 module Test.Main where
 
-import Debug
 import Prelude
 
-import Capability.Codec (encode)
-import Capability.Storage.Database (class DatabaseDocument, class DatabaseId, class DocumentId, class MonadDatabase, encodeDocument, getDocument)
 import Capability.Storage.Ledger (getLedger)
-import Control.Monad.Error.Class (class MonadThrow, liftEither)
-import Control.Monad.State (get)
-import Data.Argonaut (stringify)
+import Control.Monad.Error.Class (liftEither)
 import Data.Command.Ledger (LedgerCommand(..))
-import Data.Common (LedgerId(..), ledgerId)
-import Data.Database.Ledger (LedgerDatabaseId, LedgerDocument(..))
 import Data.Either (note)
-import Data.Instant (unInstant)
 import Effect (Effect)
 import Effect.Aff (Aff, launchAff_)
-import Effect.Class (liftEffect)
-import Effect.Console (log)
-import Effect.Exception (Error, error)
+import Effect.Exception (error)
 import Handlers.Ledger (handleCommand)
 import Test.Spec (SpecT, describe, pending)
 import Test.Spec as Spec
@@ -73,13 +63,13 @@ testSpec = do
 
       describe "UpdateLedger" do
         it "should create the ledger doc if it doesn't exists" do
-          let req = UpdateLedger { name: "Test" }
+          let req = UpdateLedgerV1 { name: "Test" }
           handleCommand req
           updated <- (liftEither <<< note (error "ledger must exist")) =<< getLedger
           updated.name `shouldEqual` "Test"
           updated.createdAt `shouldEqual` testNow
         it "should update the ledger doc" do
-          let req = UpdateLedger { name: "Test" }
+          let req = UpdateLedgerV1 { name: "Test" }
           handleCommand req
           updated <- (liftEither <<< note (error "ledger must exist")) =<< getLedger
           updated.name  `shouldEqual` "Test"

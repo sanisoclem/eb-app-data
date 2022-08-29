@@ -3,6 +3,14 @@ export const doStringResponse = (resp) => (status) => new Response(resp, { statu
 
 // wrapped functions
 export const doRequestGetMethod = (req) => req.method;
+export const doRequestGetPath = (req) => new URL(req.url).pathname.slice(1);
+export const doRequestGetParamImpl = justFn => nothing => req => key => {
+  const params = (new URL(req.url)).searchParams
+  const p = params.get(key)
+  if (p === undefined || p === null || p === '') return nothing;
+  return justFn(p);
+}
+
 export const doRequestGetBodyImpl = (req) => () => req.text();
 export const doGetStateImpl = justFn => nothing => state => key => async () => {
   const r = await state.get(key);

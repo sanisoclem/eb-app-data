@@ -2,7 +2,8 @@ module Capability.Storage.Ledger where
 
 import Prelude
 
-import Capability.Storage.Database (class MonadDatabase, class MonadIndexedDatabase, deleteIndexedDocument, getDocument, putDocument, putIndexedDocument, tryGetDocument)
+import Capability.Storage.Cf (class MonadCfStorage)
+import Capability.Storage.Database (class MonadDatabase, class MonadIndexedDatabase, class MonadReadonlyDatabase, class MonadReadonlyIndexedDatabase, deleteIndexedDocument, getDocument, getDocumentReadonly, putDocument, putIndexedDocument, tryGetDocument, tryGetDocumentReadonly)
 import Capability.Storage.Transactional (class MonadTransactionalStorage)
 import Capability.Utility (ensure)
 import Control.Monad.Error.Class (class MonadThrow)
@@ -11,6 +12,11 @@ import Data.Database.Ledger (AccountDocumentRecord, LedgerDatabaseId, LedgerDocu
 import Data.Maybe (Maybe, isJust)
 import Effect.Exception (Error)
 import Type.Prelude (Proxy(..))
+
+class Monad m <= MonadLedgerReadonlyDb m where
+  getLedgerReadonly :: m (Maybe LedgerDocumentRecord)
+  getAccountReadonly :: AccountId -> m AccountDocumentRecord
+  getTransactionReadonly :: TransactionId -> m TransactionDocumentRecord
 
 class Monad m <= MonadLedgerDb m where
   getLedger :: m (Maybe LedgerDocumentRecord)
@@ -34,3 +40,9 @@ instance (Monad m, MonadThrow Error m, MonadDatabase LedgerDatabaseId m, MonadIn
     ensure "no existing transaction with same id" $ isJust existing
     putIndexedDocument $ transactionDocument t
   deleteTransaction txId = deleteIndexedDocument (Proxy :: Proxy TransactionDocument) txId
+
+
+instance (Monad m, MonadThrow Error m, MonadReadonlyDatabase LedgerDatabaseId m, MonadReadonlyIndexedDatabase LedgerDatabaseId LedgerIndexes m, MonadCfStorage m) => MonadLedgerReadonlyDb m where
+  getLedgerReadonly = map unLedgerDocument <$> tryGetDocumentReadonly ledgerId
+  getAccountReadonly accountId = unAccountDocument <$> getDocumentReadonly accountId
+  getTransactionReadonly txId = unTransactionDocument <$> getDocumentReadonly txId

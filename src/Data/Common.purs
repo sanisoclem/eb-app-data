@@ -36,8 +36,11 @@ unAccountId ∷ AccountId → String
 unAccountId = coerce
 accountId :: String -> AccountId
 accountId = coerce
-derive newtype instance decodeJsonAccountId :: DecodeJson AccountId
-derive newtype instance encodeJsonAccountId :: EncodeJson AccountId
+
+derive newtype instance DecodeJson AccountId
+derive newtype instance EncodeJson AccountId
+derive newtype instance Eq AccountId
+derive newtype instance Ord AccountId
 instance randomIdAccountId :: RandomId AccountId where
   generate = AccountId
 
@@ -46,8 +49,8 @@ unTransactionId ∷ TransactionId → String
 unTransactionId = coerce
 transactionId :: String -> TransactionId
 transactionId = coerce
-derive newtype instance decodeJsonTransactionId :: DecodeJson TransactionId
-derive newtype instance encodeJsonTransactionId :: EncodeJson TransactionId
+derive newtype instance DecodeJson TransactionId
+derive newtype instance EncodeJson TransactionId
 instance randomIdTransactionId :: RandomId TransactionId where
   generate = TransactionId
 

@@ -7,20 +7,20 @@ import Prelude
 
 import Capability.Now (class MonadNow, nowUtc)
 import Capability.RandomId (generateId)
-import Capability.Storage.Ledger (class MonadLedgerDb, deleteTransaction, getAccount, getLedger, getTransaction, postTransaction, putAccount, putLedger, putTransaction)
+import Capability.Storage.Ledger (class MonadLedgerDb, class MonadLedgerReadonlyDb, deleteTransaction, getAccount, getLedger, getLedgerReadonly, getTransaction, postTransaction, putAccount, putLedger, putTransaction)
 import Capability.Storage.Outbox (class MonadOutbox, queue)
 import Capability.Utility (ensure)
-import Control.Monad.Error.Class (class MonadThrow)
+import Control.Monad.Error.Class (class MonadThrow, throwError)
 import Data.Command.Ledger (LedgerCommand(..))
 import Data.Common (AccountId)
 import Data.Database.Ledger (creditAccount, debitAccount)
 import Data.Event.Ledger (LedgerEvent(..))
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Money (Money, zeroMoney)
-import Data.Query.Ledger (LedgerQuery(..))
+import Data.Query.Ledger (LedgerQuery(..), LedgerQueryResult(..))
 import Data.Traversable (sequence)
 import Effect.Class (class MonadEffect)
-import Effect.Exception (Error)
+import Effect.Exception (Error, error)
 
 handleCommand
   :: ∀ m
@@ -32,7 +32,7 @@ handleCommand
   => LedgerCommand
   -> m Unit
 handleCommand = case _ of
-    UpdateLedger x -> do
+    UpdateLedgerV1 x -> do
       ledger <- getLedger
       createdAt <- nowUtc
       putLedger $
@@ -40,7 +40,7 @@ handleCommand = case _ of
           Just l -> l { name = x.name }
           _ -> { name: x.name, createdAt }
       queue LedgerUpdated
-    CreateAccount x -> do
+    CreateAccountV1 x -> do
       accountId <- generateId
       putAccount
         { accountId
@@ -51,16 +51,16 @@ handleCommand = case _ of
         , closed: false
         }
       queue AccountCreated
-    UpdateAccount x -> do
+    UpdateAccountV1 x -> do
       account <- getAccount x.accountId
       putAccount account { name = x.name }
       queue AccountUpdated
-    CloseAccount accountId -> do
+    CloseAccountV1 accountId -> do
       account <- getAccount accountId
       ensure "Account balance should be zero" $ account.balance == zeroMoney
       putAccount account { closed = true }
       queue AccountClosed
-    CreateTransaction x -> do
+    CreateTransactionV1 x -> do
       transactionId <- generateId
       postTransaction
         { transactionId
@@ -74,7 +74,7 @@ handleCommand = case _ of
       getCreditPut x.credit x.amount
       queue TransactionCreated
       queue BalanceUpdated
-    UpdateTransaction x -> do
+    UpdateTransactionV1 x -> do
       prevTrans <- getTransaction x.transactionId
       -- reverse prev transaction
       getDebitPut prevTrans.credit prevTrans.amount
@@ -92,7 +92,7 @@ handleCommand = case _ of
       getCreditPut updatedTrans.credit updatedTrans.amount
       queue TransactionUpdated
       queue BalanceUpdated
-    DeleteTransaction transactionId -> do
+    DeleteTransactionV1 transactionId -> do
       trans <- getTransaction transactionId
       getDebitPut trans.credit trans.amount
       getCreditPut trans.debit trans.amount
@@ -108,12 +108,17 @@ getCreditPut maybeAccount amount = void <<< sequence $ (putAccount <<< creditAcc
 
 handleQuery
   :: ∀ m
-   . MonadLedgerDb m
+   . MonadLedgerReadonlyDb m
   => MonadThrow Error m
   => LedgerQuery
-  -> m Unit -- TODO
+  -> m LedgerQueryResult
 handleQuery = case _ of
-  GetLedger -> do
-    ledger <- getLedger
-    pure unit
-  _ -> pure unit
+  GetLedgerV1 -> do
+    ledger <- getLedgerReadonly
+    pure $
+      GetLedgerResultV1
+        { name: fromMaybe "" (_.name <$> ledger)
+        , accounts: []
+        }
+  _ -> do
+    throwError $ error "not implemented"
