@@ -3,7 +3,7 @@ module Main where
 import Prelude
 
 import AppM (AppM, runAppM, mkContext)
-import Capability.Fetch (fromRequest, getBodyJson, getPath, getRequestMethod)
+import Capability.Fetch (fromRequest, getRequestMethod)
 import Capability.Storage.Transactional (batchOperation)
 import Control.Monad.Error.Class (catchError)
 import Control.Promise (Promise, fromAff)

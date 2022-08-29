@@ -117,7 +117,7 @@ handleQuery = case _ of
     ledger <- getLedgerReadonly
     pure $
       GetLedgerResultV1
-        { name: fromMaybe "" (_.name <$> ledger)
+        { name: fromMaybe "" (ledger <#> _.name)
         , accounts: []
         }
   _ -> do
