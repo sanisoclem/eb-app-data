@@ -10,7 +10,7 @@ module Test.TestM
 import Prelude
 
 import Capability.Has (class HasGetter, class HasSetter, getter, setter)
-import Capability.Now (class MonadNow, nowUtc)
+import Capability.Now (class MonadNow)
 import Capability.Storage.Cf (class MonadCfStorage)
 import Capability.Storage.Outbox (outboxDocumentId)
 import Capability.Storage.Transactional (class MonadTransactionalStorage)
@@ -18,8 +18,11 @@ import Control.Monad.Error.Class (class MonadError, class MonadThrow)
 import Control.Monad.State (class MonadState, StateT, gets, modify_, runStateT)
 import Data.Argonaut (Json)
 import Data.Argonaut.Core as JSON
-import Data.Instant (Instant(..), mkInstant)
-import Data.Map (Map, delete, empty, insert, lookup)
+import Data.Array (fromFoldable)
+import Data.Instant (Instant, mkInstant)
+import Data.Map (Map, delete, empty, filterWithKey, insert, lookup)
+import Data.Maybe (isJust)
+import Data.String (Pattern(..), stripPrefix)
 import Data.Tuple (fst)
 import Effect.Aff (Aff, Error)
 import Effect.Aff.Class (class MonadAff)
@@ -51,6 +54,7 @@ instance MonadCfStorage TestM where
   tryGetState key = lookup key <$> gets getter
   putState k v = modify_ (setter $ insert k v)
   deleteState k = modify_ $ setter (\(m :: Map String Json) -> delete k m)
+  getStateByPrefix prefix = fromFoldable <$> filterWithKey (\k -> \_ -> isJust $ stripPrefix (Pattern prefix) k) <$> gets getter
 
 instance MonadNow TestM where
   nowUtc = gets getter

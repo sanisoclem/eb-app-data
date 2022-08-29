@@ -12,6 +12,7 @@ class Monad m <= MonadCfStorage m where
   tryGetState :: String -> m (Maybe Json)
   putState :: String -> Json -> m Unit
   deleteState :: String -> m Unit
+  getStateByPrefix :: String -> m (Array Json)
 
 class Monad m <= MonadCfStorageBatch m where
   runBatch :: { puts:: Array { docId :: String, body :: Json }, deletes :: Array String } -> m Unit

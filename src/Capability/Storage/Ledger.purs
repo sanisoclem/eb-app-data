@@ -30,15 +30,15 @@ class Monad m <= MonadLedgerDb m where
 
 instance (Monad m, MonadThrow Error m, MonadDatabase LedgerDatabaseId m, MonadIndexedDatabase LedgerDatabaseId LedgerIndexes m, MonadTransactionalStorage m) => MonadLedgerDb m where
   getLedger = map unLedgerDocument <$> tryGetDocument ledgerId
-  putLedger = putDocument <<< ledgerDocument
+  putLedger = putDocument ledgerId <<< ledgerDocument
   getAccount accountId = unAccountDocument <$> getDocument accountId
-  putAccount = putDocument <<< accountDocument
+  putAccount x = putDocument x.accountId <<< accountDocument $ x
   getTransaction txId = unTransactionDocument <$> getDocument txId
-  putTransaction = putIndexedDocument <<< transactionDocument
+  putTransaction x = putIndexedDocument x.transactionId <<< transactionDocument $ x
   postTransaction t = do
     (existing :: Maybe TransactionDocument) <- tryGetDocument t.transactionId
     ensure "no existing transaction with same id" $ isJust existing
-    putIndexedDocument $ transactionDocument t
+    putIndexedDocument t.transactionId $ transactionDocument t
   deleteTransaction txId = deleteIndexedDocument (Proxy :: Proxy TransactionDocument) txId
 
 

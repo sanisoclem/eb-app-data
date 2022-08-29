@@ -5,9 +5,10 @@ import Prelude
 import Capability.Fetch (class MonadFetchRequest)
 import Capability.Has (class HasGetter, getter)
 import Capability.Now (class MonadNow)
-import Capability.Storage.Cf (class MonadCfStorageBatch, class MonadCfStorage)
+import Capability.Storage.Cf (class MonadCfStorage, class MonadCfStorageBatch, getStateByPrefix)
 import Control.Monad.Error.Class (class MonadError, class MonadThrow)
 import Control.Monad.State (class MonadState, StateT, gets, runStateT)
+import Data.Array (fromFoldable)
 import Data.DateTime.Instant as StdInstant
 import Data.Fetch (RequestMethod(..))
 import Data.Instant (mkInstant)
@@ -18,7 +19,7 @@ import Effect.Aff (Aff, Error)
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Class (class MonadEffect, liftEffect)
 import Effect.Now (now)
-import FFI.DurableObject (DurableObjectRequest, DurableObjectState, doBatchState, doDeleteState, doGetState, doPutState, doRequestGetBody, doRequestGetMethod, doRequestGetParam, doRequestGetPath, mkBatchedPut)
+import FFI.DurableObject (DurableObjectRequest, DurableObjectState, doBatchState, doDeleteState, doGetState, doGetStateByPrefix, doPutState, doRequestGetBody, doRequestGetMethod, doRequestGetParam, doRequestGetPath, mkBatchedPut)
 import Safe.Coerce (coerce)
 
 newtype AppM a = AppM (StateT ContextData Aff a)
@@ -41,11 +42,14 @@ instance MonadCfStorage AppM where
   tryGetState key = do
     state <- gets getter
     liftAff $ doGetState state key
-
   putState key value = do
     state <- gets getter
     liftAff <<< doPutState state key $ value
   deleteState key = liftAff <<< (flip doDeleteState) key =<< gets getter
+  getStateByPrefix prefix = do
+    state <- gets getter
+    resultMap <- liftAff <<< doGetStateByPrefix state $ prefix
+    pure $ fromFoldable resultMap
 
 instance MonadCfStorageBatch AppM where
   runBatch batch = do

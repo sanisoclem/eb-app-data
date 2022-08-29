@@ -2,7 +2,7 @@ module Data.Database.Ledger  where
 
 import Prelude
 
-import Capability.Storage.Database (class DatabaseDocument, class DatabaseId, class DatabaseIndex, class DocumentId, class IndexedDocument)
+import Capability.Storage.Database (class DatabaseDocument, class DatabaseId, class DatabaseIndex, class DocumentCollection, class DocumentId, class DatabaseDocumentId, class IndexedDocument, getIdPrefix)
 import Capability.Utility (convertJsonErrorToError)
 import Control.Alternative ((<|>))
 import Data.Argonaut (decodeJson, encodeJson)
@@ -13,6 +13,7 @@ import Data.Maybe (Maybe(..))
 import Data.Money (Money)
 import Data.String (Pattern(..), stripPrefix)
 import Safe.Coerce (coerce)
+import Type.Prelude (Proxy(..))
 
 data LedgerDatabaseId
   = DbLedgerId LedgerId
@@ -21,24 +22,24 @@ data LedgerDatabaseId
 
 instance DatabaseId LedgerDatabaseId where
   dbIdString (DbLedgerId _) = "ledger"
-  dbIdString (DbTransactionId x) = "txn/" <> unTransactionId x
-  dbIdString (DbAccountId x) = "acct/" <> unAccountId x
+  dbIdString (DbTransactionId x) = getIdPrefix (Proxy :: Proxy TransactionDocument) <> unTransactionId x
+  dbIdString (DbAccountId x) = getIdPrefix (Proxy :: Proxy AccountDocument) <> unAccountId x
   dbIdFromString = case _ of
     "ledger" -> Just $ DbLedgerId ledgerId
-    x -> DbAccountId <<< accountId <$> stripPrefix (Pattern "acct/") x
-      <|> DbTransactionId <<< transactionId <$> stripPrefix (Pattern "txn/") x
+    x -> DbAccountId <<< accountId <$> stripPrefix (Pattern $ getIdPrefix (Proxy :: Proxy AccountDocument)) x
+      <|> DbTransactionId <<< transactionId <$> stripPrefix (Pattern $ getIdPrefix (Proxy :: Proxy TransactionDocument)) x
 
-instance DocumentId LedgerDatabaseId AccountId where
+instance DatabaseDocumentId LedgerDatabaseId AccountId where
   wrapDocumentId = DbAccountId
   tryUnwrapDocumentId (DbAccountId x) = Just x
   tryUnwrapDocumentId _ = Nothing
 
-instance DocumentId LedgerDatabaseId TransactionId where
+instance DatabaseDocumentId LedgerDatabaseId TransactionId where
   wrapDocumentId = DbTransactionId
   tryUnwrapDocumentId (DbTransactionId x) = Just x
   tryUnwrapDocumentId _ = Nothing
 
-instance DocumentId LedgerDatabaseId LedgerId where
+instance DatabaseDocumentId LedgerDatabaseId LedgerId where
   wrapDocumentId = DbLedgerId
   tryUnwrapDocumentId (DbLedgerId x) = Just x
   tryUnwrapDocumentId _ = Nothing
@@ -64,8 +65,8 @@ unLedgerDocument :: LedgerDocument -> LedgerDocumentRecord
 unLedgerDocument = coerce
 ledgerDocument :: LedgerDocumentRecord -> LedgerDocument
 ledgerDocument = coerce
-instance DatabaseDocument LedgerDocument LedgerId where
-  getDocumentId _ = ledgerId
+instance DocumentId LedgerDocument LedgerId
+instance DatabaseDocument LedgerDocument where
   decodeDocument json = convertJsonErrorToError <<< map LedgerDocument $ decodeJson json
   encodeDocument (LedgerDocument ledger) = encodeJson ledger
 
@@ -82,10 +83,12 @@ unAccountDocument :: AccountDocument -> AccountDocumentRecord
 unAccountDocument = coerce
 accountDocument :: AccountDocumentRecord -> AccountDocument
 accountDocument = coerce
-instance DatabaseDocument AccountDocument AccountId where
-  getDocumentId (AccountDocument x) = x.accountId
+instance DocumentId AccountDocument AccountId
+instance DatabaseDocument AccountDocument where
   decodeDocument json = convertJsonErrorToError <<< map AccountDocument $ decodeJson json
   encodeDocument (AccountDocument acct) = encodeJson acct
+instance DocumentCollection AccountDocument where
+  getIdPrefix _ = "acct/"
 
 debitAccount :: Money -> AccountDocumentRecord -> AccountDocumentRecord
 debitAccount amount account = case account.accountType of
@@ -110,9 +113,11 @@ unTransactionDocument :: TransactionDocument -> TransactionDocumentRecord
 unTransactionDocument = coerce
 transactionDocument :: TransactionDocumentRecord -> TransactionDocument
 transactionDocument = coerce
-instance DatabaseDocument TransactionDocument TransactionId where
-  getDocumentId (TransactionDocument x) = x.transactionId
+instance DocumentId TransactionDocument TransactionId
+instance DatabaseDocument TransactionDocument where
   decodeDocument json = convertJsonErrorToError <<< map TransactionDocument $ decodeJson json
   encodeDocument (TransactionDocument tx) = encodeJson tx
 instance IndexedDocument TransactionDocument LedgerIndexes where
   getRangeIndexes (TransactionDocument doc) = singleton TransactionSortKey doc.sortKey
+instance DocumentCollection TransactionDocument where
+  getIdPrefix _ = "txn/"

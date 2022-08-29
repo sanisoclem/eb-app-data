@@ -17,6 +17,7 @@ export const doGetStateImpl = justFn => nothing => state => key => async () => {
   if (r === undefined) return nothing;
   return justFn(r);
 }
+export const doGetStateByPrefixImpl = state => prefix => () => state.list({ prefix });
 export const doPutStateImpl = state => key => value => () => state.put(key, value);
 export const doDeleteStateImpl = state => key => () => state.delete(key);
 export const doBatchStateImpl = state => deletes => puts => async () => {
