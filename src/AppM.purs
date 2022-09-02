@@ -4,21 +4,15 @@ import Prelude
 
 import Capability.Fetch (class MonadFetchRequest)
 import Capability.Has (class HasGetter, getter)
-import Capability.Now (class MonadNow)
 import Capability.Storage.Cf (class MonadCfStorage, class MonadCfStorageBatch)
 import Control.Monad.Error.Class (class MonadError, class MonadThrow)
 import Control.Monad.State (class MonadState, StateT, gets, runStateT)
 import Data.Array (fromFoldable)
-import Data.DateTime.Instant as StdInstant
 import Data.Fetch (RequestMethod(..))
-import Data.Instant (mkInstant)
-import Data.Int (ceil)
-import Data.Newtype (unwrap)
 import Data.Tuple (fst)
 import Effect.Aff (Aff, Error)
 import Effect.Aff.Class (class MonadAff, liftAff)
-import Effect.Class (class MonadEffect, liftEffect)
-import Effect.Now (now)
+import Effect.Class (class MonadEffect)
 import FFI.DurableObject (DurableObjectRequest, DurableObjectState, doBatchState, doDeleteState, doGetState, doGetStateByPrefix, doPutState, doRequestGetBody, doRequestGetMethod, doRequestGetParam, doRequestGetPath, mkBatchedPut)
 import Safe.Coerce (coerce)
 
@@ -57,7 +51,7 @@ instance MonadCfStorageBatch AppM where
     state <- gets getter
     liftAff $ doBatchState state puts batch.deletes
 
-instance incomingRequestAppM :: MonadFetchRequest AppM where
+instance MonadFetchRequest AppM where
   getRequestMethod = do
     request <- gets getter
     pure $ case doRequestGetMethod request of
@@ -75,11 +69,6 @@ instance incomingRequestAppM :: MonadFetchRequest AppM where
   tryGetParam key = do
     req <- gets getter
     pure $ doRequestGetParam req key
-
-instance MonadNow AppM where
-  nowUtc = do
-    inst <- liftEffect now
-    pure <<< mkInstant <<< ceil <<< unwrap <<< StdInstant.unInstant $ inst
 
 data ContextData = ContextData
   { durableObjectRequest :: DurableObjectRequest

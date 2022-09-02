@@ -2,7 +2,8 @@ module Data.Query.Ledger where
 
 import Prelude
 
-import Capability.Fetch (class MonadFetchRequest, class MonadFromRequest, getPath, tryGetParamInt)
+import Capability.Fetch (class MonadFetchRequest, class MonadFromRequest, getPath, tryGetParamNumber)
+import Control.Bind (bindFlipped)
 import Control.Monad.Error.Class (class MonadThrow, throwError)
 import Data.Argonaut (class DecodeJson, class EncodeJson)
 import Data.Argonaut.Decode.Generic (genericDecodeJson)
@@ -32,11 +33,11 @@ data LedgerQueryResult
       , closed :: Boolean
       }
     }
-  | GetBalancesResultV1 (Map AccountId Money)
+  | GetBalancesResultV1 (Map AccountId { credits :: Money, debits :: Money })
   | GetTransactionsResultV1
     ( Array
       { transactionId :: TransactionId
-      , sortKey :: Int
+      , date :: Instant
       , credit :: Maybe AccountId
       , debit :: Maybe AccountId
       , amount :: Money
@@ -57,7 +58,7 @@ instance (MonadFetchRequest m, MonadThrow Error m) => MonadFromRequest m LedgerQ
       "GetLedgerV1" -> pure GetLedgerV1
       "GetBalancesV1" -> pure GetBalancesV1
       "GetTransactionsV1" -> do
-        from <- map mkInstant <$> tryGetParamInt "from"
-        to <- map mkInstant <$> tryGetParamInt "to"
+        from <- bindFlipped mkInstant <$> tryGetParamNumber "from"
+        to <- bindFlipped mkInstant <$> tryGetParamNumber "to"
         pure $ GetTransactionsV1 { from, to }
       _ -> throwError $ error "Cannot build ledger query from request"

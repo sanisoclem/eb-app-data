@@ -3,12 +3,13 @@ module Capability.Storage.Ledger where
 import Prelude
 
 import Capability.Storage.Cf (class MonadCfStorage)
-import Capability.Storage.Database (class MonadDatabase, class MonadIndexedDatabase, class MonadReadonlyDatabase, class MonadReadonlyIndexedDatabase, deleteIndexedDocument, getCollection, getDocument, getDocumentReadonly, putDocument, putIndexedDocument, tryGetDocument, tryGetDocumentReadonly)
+import Capability.Storage.Database (class MonadDatabase, class MonadIndexedDatabase, class MonadReadonlyDatabase, class MonadReadonlyIndexedDatabase, deleteIndexedDocument, getCollection, getDocument, getDocumentReadonly, getFromRangeIndexReadonly, putDocument, putIndexedDocument, tryGetDocument, tryGetDocumentReadonly)
 import Capability.Storage.Transactional (class MonadTransactionalStorage)
 import Capability.Utility (ensure)
 import Control.Monad.Error.Class (class MonadThrow)
 import Data.Common (AccountId, TransactionId, balanceId, ledgerId)
-import Data.Database.Ledger (AccountDocumentRecord, LedgerBalanceDocumentRecord, LedgerDatabaseId, LedgerDocumentRecord, LedgerIndexes, TransactionDocument, TransactionDocumentRecord, accountDocument, ledgerBalanceDocument, ledgerDocument, transactionDocument, unAccountDocument, unLedgerBalanceDocument, unLedgerDocument, unTransactionDocument)
+import Data.Database.Ledger (AccountDocumentRecord, LedgerBalanceDocumentRecord, LedgerDatabaseId, LedgerDocumentRecord, LedgerIndexes(..), TransactionDocument, TransactionDocumentRecord, accountDocument, ledgerBalanceDocument, ledgerDocument, transactionDocument, unAccountDocument, unLedgerBalanceDocument, unLedgerDocument, unTransactionDocument)
+import Data.Instant (Instant, unInstant)
 import Data.Map (alter, empty)
 import Data.Maybe (Maybe(..), fromMaybe, isNothing)
 import Data.Money (Money, zeroMoney)
@@ -21,6 +22,7 @@ class Monad m <= MonadLedgerReadonlyDb m where
   getAccountsReadonly :: m (Array AccountDocumentRecord)
   getBalancesReadonly :: m LedgerBalanceDocumentRecord
   getTransactionReadonly :: TransactionId -> m TransactionDocumentRecord
+  getTransactionsReadonly :: Maybe Instant -> Maybe Instant -> m (Array TransactionDocumentRecord)
 
 class Monad m <= MonadLedgerDb m where
   getLedger :: m (Maybe LedgerDocumentRecord)
@@ -55,6 +57,10 @@ instance (Monad m, MonadThrow Error m, MonadReadonlyDatabase LedgerDatabaseId m,
   getTransactionReadonly txId = unTransactionDocument <$> getDocumentReadonly txId
   getBalancesReadonly = fromMaybe empty <$> map unLedgerBalanceDocument <$> tryGetDocumentReadonly balanceId
   getAccountsReadonly = map unAccountDocument <$> getCollection
+  getTransactionsReadonly f t = do
+    let from = unInstant <$> f
+    let to = unInstant <$> t
+    map unTransactionDocument <$> getFromRangeIndexReadonly TransactionSortKey from to
 
 type CreditDebitOperation = { accountId:: AccountId, amount :: Money }
 mkCdo ∷ Money -> AccountId -> CreditDebitOperation

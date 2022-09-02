@@ -7,15 +7,15 @@ import Prelude
 
 import Capability.Now (class MonadNow, nowUtc)
 import Capability.RandomId (generateId)
-import Capability.Storage.Ledger (class MonadLedgerDb, class MonadLedgerReadonlyDb, deleteTransaction, getAccount, getAccountsReadonly, getLedger, getLedgerReadonly, getTransaction, mkCdo, postTransaction, putAccount, putLedger, putTransaction, reverseBalances, updateBalances)
+import Capability.Storage.Ledger (class MonadLedgerDb, class MonadLedgerReadonlyDb, deleteTransaction, getAccount, getAccountsReadonly, getBalancesReadonly, getLedger, getLedgerReadonly, getTransaction, mkCdo, postTransaction, putAccount, putLedger, putTransaction, reverseBalances, updateBalances, getTransactionsReadonly)
 import Capability.Storage.Outbox (class MonadOutbox, queue)
-import Control.Monad.Error.Class (class MonadThrow, throwError)
+import Control.Monad.Error.Class (class MonadThrow)
 import Data.Command.Ledger (LedgerCommand(..))
 import Data.Event.Ledger (LedgerEvent(..))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Query.Ledger (LedgerQuery(..), LedgerQueryResult(..))
 import Effect.Class (class MonadEffect)
-import Effect.Exception (Error, error)
+import Effect.Exception (Error)
 
 handleCommand
   :: ∀ m
@@ -58,7 +58,7 @@ handleCommand = case _ of
       transactionId <- generateId
       postTransaction
         { transactionId
-        , sortKey: x.sortKey
+        , date: x.date
         , credit: x.credit
         , debit: x.debit
         , amount: x.amount
@@ -74,7 +74,7 @@ handleCommand = case _ of
 
       let updatedTrans = prevTrans { amount = x.amount
         , notes = x.notes
-        , sortKey = x.sortKey
+        , date = x.date
         , debit = x.debit
         , credit = x.credit
       }
@@ -105,5 +105,7 @@ handleQuery = case _ of
         { name: fromMaybe "" (ledger <#> _.name)
         , accounts: accounts
         }
-  _ -> do
-    throwError $ error "not implemented"
+  GetBalancesV1 -> do
+    GetBalancesResultV1 <$> getBalancesReadonly
+  GetTransactionsV1 x -> do
+    GetTransactionsResultV1 <$> getTransactionsReadonly x.from x.to

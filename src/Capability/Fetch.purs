@@ -9,8 +9,9 @@ import Data.Argonaut (class DecodeJson, decodeJson, jsonParser)
 import Data.Bifunctor (lmap)
 import Data.Either (note)
 import Data.Fetch (RequestMethod)
-import Data.Int (fromString)
+import Data.Int as Int
 import Data.Maybe (Maybe)
+import Data.Number as Number
 import Effect.Exception (Error, error)
 
 class Monad m <= MonadFetchRequest m where
@@ -31,10 +32,13 @@ getParam key = do
   liftEither <<< note (error $ "searchParam " <> key <> " not found") $ mParam
 
 tryGetParamInt ::  ∀ m. MonadFetchRequest m => String -> m (Maybe Int)
-tryGetParamInt k = bindFlipped fromString <$> tryGetParam k
+tryGetParamInt k = bindFlipped Int.fromString <$> tryGetParam k
+
+tryGetParamNumber ::  ∀ m. MonadFetchRequest m => String -> m (Maybe Number)
+tryGetParamNumber k = bindFlipped Number.fromString <$> tryGetParam k
 
 getParamInt ::  ∀ m. MonadFetchRequest m => MonadThrow Error m => String -> m Int
-getParamInt key = liftEither <<< note (error "invalid Int") <<< fromString <=< getParam $ key
+getParamInt key = liftEither <<< note (error "invalid Int") =<< tryGetParamInt key
 
 class MonadFetchRequest m <= MonadFromRequest m a where
   fromRequest :: m a

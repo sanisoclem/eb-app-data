@@ -2,7 +2,7 @@ module Capability.Storage.Database where
 
 import Prelude
 
-import Capability.Storage.Cf (class MonadCfStorage, getState, getStateByPrefix, tryGetState)
+import Capability.Storage.Cf (class MonadCfStorage, getStateByPrefix, tryGetState)
 import Capability.Storage.Transactional (class MonadTransactionalStorage, batchDeleteState, batchGetState, batchPutState, batchTryGetState)
 import Capability.Utility (convertJsonErrorToError)
 import Control.Monad.Error.Class (class MonadThrow, liftEither)
@@ -79,7 +79,7 @@ class DatabaseIndex idx where
   getIndexId :: idx -> String
 
 class Ord idx <= IndexedDocument doc idx | doc -> idx where
-  getRangeIndexes :: doc -> Map idx Int
+  getRangeIndexes :: doc -> Map idx Number
 
 class MonadReadonlyIndexedDatabase :: Type -> Type -> (Type -> Type) -> Constraint
 class (Monad m, DatabaseId dbId, DatabaseIndex idx) <= MonadReadonlyIndexedDatabase dbId idx m where
@@ -89,8 +89,8 @@ class (Monad m, DatabaseId dbId, DatabaseIndex idx) <= MonadReadonlyIndexedDatab
     => DatabaseDocumentId dbId docId
     => DocumentId doc docId
     => idx
-    -> Maybe Int
-    -> Maybe Int
+    -> Maybe Number
+    -> Maybe Number
     -> m (Array doc)
 
 class (Monad m, DatabaseId dbId, DatabaseIndex idx) <= MonadIndexedDatabase dbId idx m where
@@ -100,8 +100,8 @@ class (Monad m, DatabaseId dbId, DatabaseIndex idx) <= MonadIndexedDatabase dbId
     => DatabaseDocumentId dbId docId
     => DocumentId doc docId
     => idx
-    -> Maybe Int
-    -> Maybe Int
+    -> Maybe Number
+    -> Maybe Number
     -> m (Array doc)
   putIndexedDocument ::
     forall doc docId
@@ -122,7 +122,7 @@ class (Monad m, DatabaseId dbId, DatabaseIndex idx) <= MonadIndexedDatabase dbId
     -> docId
     -> m Unit
 
-type RangeIndexDocument = Map Int (Array String)
+type RangeIndexDocument = Map Number (Array String)
 
 getDocumentReadonly ::
   forall dbId doc docId m
@@ -196,14 +196,15 @@ instance (MonadTransactionalStorage m, MonadThrow Error m, DatabaseId dbId) => M
 
 instance (MonadCfStorage m, MonadThrow Error m, DatabaseId dbId, DatabaseIndex idx, MonadReadonlyDatabase dbId m) => MonadReadonlyIndexedDatabase dbId idx m where
   getFromRangeIndexReadonly index min max = do
-    (indexDoc :: RangeIndexDocument) <- liftEither <=< map (convertJsonErrorToError <<< decodeJson) <<< getState $ getFullIndexId index
+    json <- tryGetState $ getFullIndexId index
+    (indexDoc :: RangeIndexDocument) <- fromMaybe (pure empty) $ (liftEither <<< convertJsonErrorToError <<< decodeJson) <$> json
     let (ids :: Array String) = foldSubmap min max (\_k v -> v) indexDoc
     let (dbIds :: Array dbId) = filterMap dbIdFromString ids
     sequence $ getDocumentReadonly <$> filterMap tryUnwrapDocumentId dbIds
 
 
 instance (MonadTransactionalStorage m, MonadThrow Error m, DatabaseId dbId, DatabaseIndex idx, MonadDatabase dbId m) => MonadIndexedDatabase dbId idx m where
-  getFromRangeIndex :: forall doc docId. DatabaseDocument doc => DatabaseDocumentId dbId docId => DocumentId doc docId => idx -> Maybe Int -> Maybe Int -> m (Array doc)
+  getFromRangeIndex :: forall doc docId. DatabaseDocument doc => DatabaseDocumentId dbId docId => DocumentId doc docId => idx -> Maybe Number -> Maybe Number -> m (Array doc)
   getFromRangeIndex index min max = do
     (indexDoc :: RangeIndexDocument) <- liftEither <=< map (convertJsonErrorToError <<< decodeJson) <<< batchGetState $ getFullIndexId index
     let (ids :: Array String) = foldSubmap min max (\_k v -> v) indexDoc
@@ -226,7 +227,7 @@ instance (MonadTransactionalStorage m, MonadThrow Error m, DatabaseId dbId, Data
           let (dbId :: dbId) = wrapDocumentId dId
           let id = dbIdString dbId
           void <$> sequence $ mapWithIndex (updateIndex id) allUpdates
-        updateIndex :: String -> idx -> Array { delete :: Boolean, value :: Int } -> m Unit
+        updateIndex :: String -> idx -> Array { delete :: Boolean, value :: Number } -> m Unit
         updateIndex docId idx updates = do
           let indexId = getFullIndexId idx
           maybState <- batchTryGetState $ indexId

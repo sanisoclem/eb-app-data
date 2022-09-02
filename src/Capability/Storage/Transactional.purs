@@ -3,7 +3,6 @@ module Capability.Storage.Transactional where
 import Prelude
 
 import Capability.Has (setter, class HasSetter)
-import Capability.Now (class MonadNow, nowUtc)
 import Capability.Storage.Cf (class MonadCfStorage, class MonadCfStorageBatch, runBatch, tryGetState)
 import Control.Monad.Error.Class (class MonadThrow, liftEither)
 import Control.Monad.State (class MonadState, StateT, get, modify_, runStateT)
@@ -33,9 +32,6 @@ derive newtype instance Monad m => MonadState BatchOperation (TransactionalStora
 derive newtype instance MonadTrans TransactionalStorageT
 derive newtype instance (MonadEffect m) => MonadEffect (TransactionalStorageT m)
 derive newtype instance (MonadAff m) => MonadAff (TransactionalStorageT m)
-
-instance (MonadNow m) => MonadNow (TransactionalStorageT m) where
-  nowUtc = lift nowUtc
 
 batchOperation :: ∀ m a. MonadCfStorageBatch m => TransactionalStorageT m a -> m a
 batchOperation m = do

@@ -7,6 +7,7 @@ import Data.Argonaut.Decode.Generic (genericDecodeJson)
 import Data.Argonaut.Encode.Generic (genericEncodeJson)
 import Data.Common (AccountId, AccountType, Denomination, TransactionId)
 import Data.Generic.Rep (class Generic)
+import Data.Instant (Instant)
 import Data.Maybe (Maybe)
 import Data.Money (Money)
 import Effect.Exception (Error)
@@ -26,14 +27,14 @@ data LedgerCommand
       }
   | CloseAccountV1 AccountId
   | CreateTransactionV1
-      { sortKey :: Int
+      { date :: Instant
       , credit :: Maybe AccountId
       , debit :: Maybe AccountId
       , amount :: Money
       , notes :: String
       }
   | UpdateTransactionV1
-      { sortKey :: Int
+      { date :: Instant
       , transactionId :: TransactionId
       , credit :: Maybe AccountId
       , debit :: Maybe AccountId

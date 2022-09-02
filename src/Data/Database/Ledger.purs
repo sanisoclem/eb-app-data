@@ -7,7 +7,7 @@ import Capability.Utility (convertJsonErrorToError)
 import Control.Alternative ((<|>))
 import Data.Argonaut (decodeJson, encodeJson)
 import Data.Common (AccountId, AccountType, BalanceId, Denomination, LedgerId, TransactionId, accountId, balanceId, ledgerId, transactionId, unAccountId, unTransactionId)
-import Data.Instant (Instant)
+import Data.Instant (Instant, unInstant)
 import Data.Map (Map, singleton)
 import Data.Maybe (Maybe(..))
 import Data.Money (Money)
@@ -110,7 +110,7 @@ instance DocumentCollection AccountDocument where
 
 type TransactionDocumentRecord =
   { transactionId :: TransactionId
-  , sortKey :: Int
+  , date :: Instant
   , credit :: Maybe AccountId
   , debit :: Maybe AccountId
   , amount :: Money
@@ -126,6 +126,6 @@ instance DatabaseDocument TransactionDocument where
   decodeDocument json = convertJsonErrorToError <<< map TransactionDocument $ decodeJson json
   encodeDocument (TransactionDocument tx) = encodeJson tx
 instance IndexedDocument TransactionDocument LedgerIndexes where
-  getRangeIndexes (TransactionDocument doc) = singleton TransactionSortKey doc.sortKey
+  getRangeIndexes (TransactionDocument doc) = singleton TransactionSortKey $ unInstant doc.date
 instance DocumentCollection TransactionDocument where
   getIdPrefix _ = "txn/"
