@@ -29,7 +29,6 @@ data LedgerQueryResult
       , name :: String
       , accountType :: AccountType
       , denomination :: Denomination
-      , balance :: Money
       , closed :: Boolean
       }
     }

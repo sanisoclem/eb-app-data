@@ -7,18 +7,13 @@ import Prelude
 
 import Capability.Now (class MonadNow, nowUtc)
 import Capability.RandomId (generateId)
-import Capability.Storage.Ledger (class MonadLedgerDb, class MonadLedgerReadonlyDb, deleteTransaction, getAccount, getLedger, getLedgerReadonly, getTransaction, postTransaction, putAccount, putLedger, putTransaction)
+import Capability.Storage.Ledger (class MonadLedgerDb, class MonadLedgerReadonlyDb, deleteTransaction, getAccount, getAccountsReadonly, getLedger, getLedgerReadonly, getTransaction, mkCdo, postTransaction, putAccount, putLedger, putTransaction, reverseBalances, updateBalances)
 import Capability.Storage.Outbox (class MonadOutbox, queue)
-import Capability.Utility (ensure)
 import Control.Monad.Error.Class (class MonadThrow, throwError)
 import Data.Command.Ledger (LedgerCommand(..))
-import Data.Common (AccountId)
-import Data.Database.Ledger (creditAccount, debitAccount)
 import Data.Event.Ledger (LedgerEvent(..))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Money (Money, zeroMoney)
 import Data.Query.Ledger (LedgerQuery(..), LedgerQueryResult(..))
-import Data.Traversable (sequence)
 import Effect.Class (class MonadEffect)
 import Effect.Exception (Error, error)
 
@@ -45,7 +40,6 @@ handleCommand = case _ of
       putAccount
         { accountId
         , accountType: x.accountType
-        , balance: zeroMoney
         , denomination: x.denomination
         , name: x.name
         , closed: false
@@ -57,7 +51,7 @@ handleCommand = case _ of
       queue AccountUpdated
     CloseAccountV1 accountId -> do
       account <- getAccount accountId
-      ensure "Account balance should be zero" $ account.balance == zeroMoney
+      -- ensure "Account balance should be zero" $ account.balance == zeroMoney
       putAccount account { closed = true }
       queue AccountClosed
     CreateTransactionV1 x -> do
@@ -70,15 +64,13 @@ handleCommand = case _ of
         , amount: x.amount
         , notes: x.notes
         }
-      getDebitPut x.debit x.amount
-      getCreditPut x.credit x.amount
+      updateBalances (mkCdo x.amount <$> x.credit) (mkCdo x.amount <$> x.debit)
       queue TransactionCreated
       queue BalanceUpdated
     UpdateTransactionV1 x -> do
       prevTrans <- getTransaction x.transactionId
       -- reverse prev transaction
-      getDebitPut prevTrans.credit prevTrans.amount
-      getCreditPut prevTrans.debit prevTrans.amount
+      reverseBalances (mkCdo prevTrans.amount <$> prevTrans.credit) (mkCdo prevTrans.amount <$> prevTrans.debit)
 
       let updatedTrans = prevTrans { amount = x.amount
         , notes = x.notes
@@ -88,23 +80,15 @@ handleCommand = case _ of
       }
 
       putTransaction updatedTrans
-      getDebitPut updatedTrans.debit updatedTrans.amount
-      getCreditPut updatedTrans.credit updatedTrans.amount
+      updateBalances (mkCdo updatedTrans.amount <$> updatedTrans.credit) (mkCdo updatedTrans.amount <$> updatedTrans.debit)
       queue TransactionUpdated
       queue BalanceUpdated
     DeleteTransactionV1 transactionId -> do
       trans <- getTransaction transactionId
-      getDebitPut trans.credit trans.amount
-      getCreditPut trans.debit trans.amount
+      reverseBalances (mkCdo trans.amount <$> trans.credit) (mkCdo trans.amount <$> trans.debit)
       deleteTransaction transactionId
       queue TransactionDeleted
       queue BalanceUpdated
-
-getDebitPut :: ∀ m. MonadThrow Error m => MonadLedgerDb m => Maybe AccountId -> Money -> m Unit
-getDebitPut maybeAccount amount = void <<< sequence $ (putAccount <<< debitAccount amount <=< getAccount) <$> maybeAccount
-
-getCreditPut :: ∀ m. MonadThrow Error m => MonadLedgerDb m => Maybe AccountId -> Money -> m Unit
-getCreditPut maybeAccount amount = void <<< sequence $ (putAccount <<< creditAccount amount <=< getAccount) <$> maybeAccount
 
 handleQuery
   :: ∀ m
@@ -115,10 +99,11 @@ handleQuery
 handleQuery = case _ of
   GetLedgerV1 -> do
     ledger <- getLedgerReadonly
+    accounts <- getAccountsReadonly
     pure $
       GetLedgerResultV1
         { name: fromMaybe "" (ledger <#> _.name)
-        , accounts: []
+        , accounts: accounts
         }
   _ -> do
     throwError $ error "not implemented"

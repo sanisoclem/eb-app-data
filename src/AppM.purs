@@ -5,7 +5,7 @@ import Prelude
 import Capability.Fetch (class MonadFetchRequest)
 import Capability.Has (class HasGetter, getter)
 import Capability.Now (class MonadNow)
-import Capability.Storage.Cf (class MonadCfStorage, class MonadCfStorageBatch, getStateByPrefix)
+import Capability.Storage.Cf (class MonadCfStorage, class MonadCfStorageBatch)
 import Control.Monad.Error.Class (class MonadError, class MonadThrow)
 import Control.Monad.State (class MonadState, StateT, gets, runStateT)
 import Data.Array (fromFoldable)

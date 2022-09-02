@@ -2,13 +2,13 @@ module Data.Database.Ledger  where
 
 import Prelude
 
-import Capability.Storage.Database (class DatabaseDocument, class DatabaseId, class DatabaseIndex, class DocumentCollection, class DocumentId, class DatabaseDocumentId, class IndexedDocument, getIdPrefix)
+import Capability.Storage.Database (class DatabaseDocument, class DatabaseDocumentId, class DatabaseId, class DatabaseIndex, class DocumentCollection, class DocumentId, class IndexedDocument, getIdPrefix)
 import Capability.Utility (convertJsonErrorToError)
 import Control.Alternative ((<|>))
 import Data.Argonaut (decodeJson, encodeJson)
-import Data.Common (AccountId, AccountType(..), Denomination, LedgerId, TransactionId, accountId, ledgerId, transactionId, unAccountId, unTransactionId)
+import Data.Common (AccountId, AccountType, BalanceId, Denomination, LedgerId, TransactionId, accountId, balanceId, ledgerId, transactionId, unAccountId, unTransactionId)
 import Data.Instant (Instant)
-import Data.Map (singleton)
+import Data.Map (Map, singleton)
 import Data.Maybe (Maybe(..))
 import Data.Money (Money)
 import Data.String (Pattern(..), stripPrefix)
@@ -17,21 +17,29 @@ import Type.Prelude (Proxy(..))
 
 data LedgerDatabaseId
   = DbLedgerId LedgerId
+  | DbBalanceId BalanceId
   | DbTransactionId TransactionId
   | DbAccountId AccountId
 
 instance DatabaseId LedgerDatabaseId where
   dbIdString (DbLedgerId _) = "ledger"
+  dbIdString (DbBalanceId _) = "balance"
   dbIdString (DbTransactionId x) = getIdPrefix (Proxy :: Proxy TransactionDocument) <> unTransactionId x
   dbIdString (DbAccountId x) = getIdPrefix (Proxy :: Proxy AccountDocument) <> unAccountId x
   dbIdFromString = case _ of
     "ledger" -> Just $ DbLedgerId ledgerId
+    "balance" -> Just $ DbBalanceId balanceId
     x -> DbAccountId <<< accountId <$> stripPrefix (Pattern $ getIdPrefix (Proxy :: Proxy AccountDocument)) x
       <|> DbTransactionId <<< transactionId <$> stripPrefix (Pattern $ getIdPrefix (Proxy :: Proxy TransactionDocument)) x
 
 instance DatabaseDocumentId LedgerDatabaseId AccountId where
   wrapDocumentId = DbAccountId
   tryUnwrapDocumentId (DbAccountId x) = Just x
+  tryUnwrapDocumentId _ = Nothing
+
+instance DatabaseDocumentId LedgerDatabaseId BalanceId where
+  wrapDocumentId = DbBalanceId
+  tryUnwrapDocumentId (DbBalanceId x) = Just x
   tryUnwrapDocumentId _ = Nothing
 
 instance DatabaseDocumentId LedgerDatabaseId TransactionId where
@@ -70,12 +78,22 @@ instance DatabaseDocument LedgerDocument where
   decodeDocument json = convertJsonErrorToError <<< map LedgerDocument $ decodeJson json
   encodeDocument (LedgerDocument ledger) = encodeJson ledger
 
+type LedgerBalanceDocumentRecord = Map AccountId { debits :: Money, credits :: Money }
+newtype LedgerBalanceDocument = LedgerBalanceDocument LedgerBalanceDocumentRecord
+unLedgerBalanceDocument :: LedgerBalanceDocument -> LedgerBalanceDocumentRecord
+unLedgerBalanceDocument = coerce
+ledgerBalanceDocument :: LedgerBalanceDocumentRecord -> LedgerBalanceDocument
+ledgerBalanceDocument = coerce
+instance DocumentId LedgerBalanceDocument BalanceId
+instance DatabaseDocument LedgerBalanceDocument where
+  decodeDocument json = convertJsonErrorToError <<< map LedgerBalanceDocument $ decodeJson json
+  encodeDocument (LedgerBalanceDocument ledger) = encodeJson ledger
+
 type AccountDocumentRecord =
   { accountId :: AccountId
   , name :: String
   , accountType :: AccountType
   , denomination :: Denomination
-  , balance :: Money
   , closed :: Boolean
   }
 newtype AccountDocument = AccountDocument AccountDocumentRecord
@@ -89,16 +107,6 @@ instance DatabaseDocument AccountDocument where
   encodeDocument (AccountDocument acct) = encodeJson acct
 instance DocumentCollection AccountDocument where
   getIdPrefix _ = "acct/"
-
-debitAccount :: Money -> AccountDocumentRecord -> AccountDocumentRecord
-debitAccount amount account = case account.accountType of
-  Income -> account { balance = account.balance - amount }
-  Expense -> account { balance = account.balance + amount }
-  Liability -> account { balance = account.balance - amount }
-  Asset -> account { balance = account.balance + amount }
-
-creditAccount :: Money -> AccountDocumentRecord -> AccountDocumentRecord
-creditAccount amount = debitAccount (-amount)
 
 type TransactionDocumentRecord =
   { transactionId :: TransactionId

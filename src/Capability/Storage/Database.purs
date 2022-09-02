@@ -11,8 +11,8 @@ import Data.Array (delete, elem, foldl, insert, singleton, union)
 import Data.Either (Either, note)
 import Data.Filterable (filterMap)
 import Data.FunctorWithIndex (mapWithIndex)
-import Data.Map (Map, alter, foldSubmap, intersectionWith)
-import Data.Maybe (Maybe(..))
+import Data.Map (Map, alter, empty, foldSubmap, intersectionWith)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Traversable (sequence)
 import Effect.Exception (Error, error)
 import Type.Prelude (Proxy(..))
@@ -178,7 +178,7 @@ instance (MonadCfStorage m, MonadThrow Error m, DatabaseId dbId) => MonadReadonl
     => DocumentCollection doc
     => m (Array doc)
   getCollection = do
-    let prefix = getIdPrefix (Proxy :: Proxy doc)
+    let prefix = "d/" <> getIdPrefix (Proxy :: Proxy doc)
     jsons <- getStateByPrefix prefix
     sequence $ (liftEither <<< decodeDocument) <$> jsons
 
@@ -229,7 +229,9 @@ instance (MonadTransactionalStorage m, MonadThrow Error m, DatabaseId dbId, Data
         updateIndex :: String -> idx -> Array { delete :: Boolean, value :: Int } -> m Unit
         updateIndex docId idx updates = do
           let indexId = getFullIndexId idx
-          (indexDoc :: RangeIndexDocument) <- liftEither <=< map (convertJsonErrorToError <<< decodeJson) <<< batchGetState $ indexId
+          maybState <- batchTryGetState $ indexId
+          (maybIndexDoc :: Maybe RangeIndexDocument) <- sequence $ (liftEither <<< convertJsonErrorToError <<< decodeJson) <$> maybState
+          let indexDoc = fromMaybe empty maybIndexDoc
           let updatedDoc = foldl (applyUpdates docId) indexDoc updates
           batchPutState indexId (encodeJson updatedDoc)
         applyUpdates docId index = case _ of

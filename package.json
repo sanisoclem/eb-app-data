@@ -1,0 +1,26 @@
+{
+  "name": "eb-app-data",
+  "version": "1.0.0",
+  "description": "",
+  "main": "durable_objects/index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "postinstall": "spago install",
+    "clean": "rm -rf node_modules output .spago dist/*.js *.lock .cache",
+    "build": "spago build",
+    "test": "spago test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sanisoclem/eb-app-data.git"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "decimal.js": "^10.4.0",
+    "purescript": "^0.15.4",
+    "spago": "^0.20.9",
+    "uuid": "^8.3.2"
+  }
+}

@@ -20,12 +20,13 @@ module FFI.DurableObject
 import Prelude
 
 import Control.Promise (Promise, toAffE)
-import Data.Argonaut (Json, decodeJson)
+import Data.Argonaut (Json)
 import Data.Array (fromFoldable)
-import Data.Either (hush)
 import Data.Foldable (class Foldable)
-import Data.Map (Map, empty)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Map (Map)
+import Data.Map as Map
+import Data.Maybe (Maybe(..))
+import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Effect.Aff (Aff)
 
@@ -56,8 +57,8 @@ doRequestGetBody = doRequestGetBodyImpl >>> toAffE
 
 doGetStateByPrefix :: DurableObjectState -> String -> Aff (Map String Json)
 doGetStateByPrefix state prefix = do
-  json <- toAffE <<< doGetStateByPrefixImpl state $ prefix
-  pure <<< fromMaybe empty <<< hush <<< decodeJson $ json
+  items <- toAffE <<< doGetStateByPrefixImpl state $ prefix
+  pure $ Map.fromFoldable $ (\r -> Tuple r.key r.value) <$> items
 
 doGetState :: DurableObjectState -> String -> Aff (Maybe Json)
 doGetState state = doGetStateImpl Just Nothing state >>> toAffE
@@ -73,7 +74,7 @@ doBatchState state puts deletes = toAffE $ doBatchStateImpl state (fromFoldable 
 
 -- private
 foreign import doRequestGetBodyImpl :: DurableObjectRequest -> Effect (Promise String)
-foreign import doGetStateByPrefixImpl :: DurableObjectState -> String -> Effect (Promise Json)
+foreign import doGetStateByPrefixImpl :: DurableObjectState -> String -> Effect (Promise (Array { key :: String, value :: Json}))
 foreign import doGetStateImpl :: (∀ a. a -> Maybe a) -> (∀ a. Maybe a) -> DurableObjectState -> String -> Effect (Promise (Maybe Json))
 foreign import doPutStateImpl :: DurableObjectState -> String -> Json -> Effect (Promise Unit)
 foreign import doDeleteStateImpl :: DurableObjectState -> String -> Effect (Promise Unit)

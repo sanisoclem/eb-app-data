@@ -57,3 +57,7 @@ instance randomIdTransactionId :: RandomId TransactionId where
 newtype LedgerId = LedgerId Unit
 ledgerId :: LedgerId
 ledgerId = LedgerId unit
+
+newtype BalanceId = BalanceId Unit
+balanceId :: BalanceId
+balanceId = BalanceId unit
