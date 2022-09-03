@@ -33,7 +33,10 @@ data LedgerQueryResult
       , closed :: Boolean
       }
     }
-  | GetBalancesResultV1 (Map AccountId { credits :: Money, debits :: Money })
+  | GetBalancesResultV1
+    { accountBalances :: Map AccountId { debits :: Money, credits :: Money }
+    , floatingBalance :: { debits :: Money, credits :: Money }
+    }
   | GetTransactionsResultV1
     ( Array
       { transactionId :: TransactionId

@@ -8,9 +8,9 @@ import Control.Alternative ((<|>))
 import Data.Argonaut (decodeJson, encodeJson)
 import Data.Common (AccountId, AccountType, BalanceId, Denomination, LedgerId, TransactionId, accountId, balanceId, ledgerId, transactionId, unAccountId, unTransactionId)
 import Data.Instant (Instant, unInstant)
-import Data.Map (Map, singleton)
+import Data.Map (Map, empty, singleton)
 import Data.Maybe (Maybe(..))
-import Data.Money (Money)
+import Data.Money (Money, zeroMoney)
 import Data.String (Pattern(..), stripPrefix)
 import Safe.Coerce (coerce)
 import Type.Prelude (Proxy(..))
@@ -78,8 +78,13 @@ instance DatabaseDocument LedgerDocument where
   decodeDocument json = convertJsonErrorToError <<< map LedgerDocument $ decodeJson json
   encodeDocument (LedgerDocument ledger) = encodeJson ledger
 
-type LedgerBalanceDocumentRecord = Map AccountId { debits :: Money, credits :: Money }
+type LedgerBalanceDocumentRecord =
+  { accountBalances :: Map AccountId { debits :: Money, credits :: Money }
+  , floatingBalance :: { debits :: Money, credits :: Money }
+  }
 newtype LedgerBalanceDocument = LedgerBalanceDocument LedgerBalanceDocumentRecord
+emptyBalance :: LedgerBalanceDocumentRecord
+emptyBalance = { accountBalances: empty, floatingBalance: { debits: zeroMoney, credits: zeroMoney }}
 unLedgerBalanceDocument :: LedgerBalanceDocument -> LedgerBalanceDocumentRecord
 unLedgerBalanceDocument = coerce
 ledgerBalanceDocument :: LedgerBalanceDocumentRecord -> LedgerBalanceDocument

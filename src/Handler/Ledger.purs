@@ -7,13 +7,14 @@ import Prelude
 
 import Capability.Now (class MonadNow, nowUtc)
 import Capability.RandomId (generateId)
-import Capability.Storage.Ledger (class MonadLedgerDb, class MonadLedgerReadonlyDb, deleteTransaction, getAccount, getAccountsReadonly, getBalancesReadonly, getLedger, getLedgerReadonly, getTransaction, mkCdo, postTransaction, putAccount, putLedger, putTransaction, reverseBalances, updateBalances, getTransactionsReadonly)
+import Capability.Storage.Ledger (class MonadLedgerDb, class MonadLedgerReadonlyDb, deleteTransaction, ensureAccountExists, getAccount, getAccountsReadonly, getBalancesReadonly, getLedger, getLedgerReadonly, getTransaction, getTransactionsReadonly, postTransaction, putAccount, putLedger, putTransaction, updateBalances)
 import Capability.Storage.Outbox (class MonadOutbox, queue)
 import Control.Monad.Error.Class (class MonadThrow)
 import Data.Command.Ledger (LedgerCommand(..))
 import Data.Event.Ledger (LedgerEvent(..))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Query.Ledger (LedgerQuery(..), LedgerQueryResult(..))
+import Data.Traversable (sequence)
 import Effect.Class (class MonadEffect)
 import Effect.Exception (Error)
 
@@ -56,6 +57,8 @@ handleCommand = case _ of
       queue AccountClosed
     CreateTransactionV1 x -> do
       transactionId <- generateId
+      void <<< sequence $ ensureAccountExists <$> x.credit
+      void <<< sequence $ ensureAccountExists <$> x.debit
       postTransaction
         { transactionId
         , date: x.date
@@ -64,13 +67,16 @@ handleCommand = case _ of
         , amount: x.amount
         , notes: x.notes
         }
-      updateBalances (mkCdo x.amount <$> x.credit) (mkCdo x.amount <$> x.debit)
+      updateBalances x.amount x.credit x.debit
       queue TransactionCreated
       queue BalanceUpdated
     UpdateTransactionV1 x -> do
       prevTrans <- getTransaction x.transactionId
+      void <<< sequence $ ensureAccountExists <$> x.credit
+      void <<< sequence $ ensureAccountExists <$> x.debit
+
       -- reverse prev transaction
-      reverseBalances (mkCdo prevTrans.amount <$> prevTrans.credit) (mkCdo prevTrans.amount <$> prevTrans.debit)
+      updateBalances (-prevTrans.amount) prevTrans.credit prevTrans.debit
 
       let updatedTrans = prevTrans { amount = x.amount
         , notes = x.notes
@@ -80,12 +86,12 @@ handleCommand = case _ of
       }
 
       putTransaction updatedTrans
-      updateBalances (mkCdo updatedTrans.amount <$> updatedTrans.credit) (mkCdo updatedTrans.amount <$> updatedTrans.debit)
+      updateBalances updatedTrans.amount updatedTrans.credit updatedTrans.debit
       queue TransactionUpdated
       queue BalanceUpdated
     DeleteTransactionV1 transactionId -> do
       trans <- getTransaction transactionId
-      reverseBalances (mkCdo trans.amount <$> trans.credit) (mkCdo trans.amount <$> trans.debit)
+      updateBalances trans.amount trans.credit trans.debit
       deleteTransaction transactionId
       queue TransactionDeleted
       queue BalanceUpdated
