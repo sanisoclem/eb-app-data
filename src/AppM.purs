@@ -1,4 +1,4 @@
-module AppM where
+module EbAppData.AppM where
 
 import Prelude
 

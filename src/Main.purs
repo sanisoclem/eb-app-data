@@ -1,8 +1,8 @@
-module Main where
+module EbAppData.Main where
 
 import Prelude
 
-import AppM (AppM, runAppM, mkContext)
+import EbAppData.AppM (AppM, runAppM, mkContext)
 import Capability.Fetch (fromRequest, getRequestMethod)
 import Capability.Storage.Transactional (batchOperation)
 import Control.Monad.Error.Class (catchError)
