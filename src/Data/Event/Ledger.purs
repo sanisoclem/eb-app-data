@@ -1,11 +1,12 @@
-module Data.Event.Ledger where
+module EB.DB.Data.Event.Ledger where
 
 import Prelude
-import Data.Generic.Rep (class Generic)
-import Capability.Storage.Outbox (class OutboxEvent)
-import Capability.Utility (convertJsonErrorToError)
+
 import Data.Argonaut.Decode.Generic (genericDecodeJson)
 import Data.Argonaut.Encode.Generic (genericEncodeJson)
+import Data.Generic.Rep (class Generic)
+import EB.DB.Capability.Storage.Outbox (class OutboxEvent)
+import EB.DB.Capability.Utility (convertJsonErrorToError)
 
 data LedgerEvent
   = LedgerUpdated

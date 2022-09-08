@@ -1,19 +1,19 @@
-module EbAppData.AppM where
+module EB.DB.AppM where
 
 import Prelude
 
-import Capability.Fetch (class MonadFetchRequest)
-import Capability.Has (class HasGetter, getter)
-import Capability.Storage.Cf (class MonadCfStorage, class MonadCfStorageBatch)
 import Control.Monad.Error.Class (class MonadError, class MonadThrow)
 import Control.Monad.State (class MonadState, StateT, gets, runStateT)
 import Data.Array (fromFoldable)
-import Data.Fetch (RequestMethod(..))
 import Data.Tuple (fst)
+import EB.DB.Capability.Fetch (class MonadFetchRequest)
+import EB.DB.Capability.Has (class HasGetter, getter)
+import EB.DB.Capability.Storage.Cf (class MonadCfStorage, class MonadCfStorageBatch)
+import EB.DB.Data.Fetch (RequestMethod(..))
+import EB.DB.FFI.DurableObject (DurableObjectRequest, DurableObjectState, doBatchState, doDeleteState, doGetState, doGetStateByPrefix, doPutState, doRequestGetBody, doRequestGetMethod, doRequestGetParam, doRequestGetPath, mkBatchedPut)
 import Effect.Aff (Aff, Error)
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Class (class MonadEffect)
-import FFI.DurableObject (DurableObjectRequest, DurableObjectState, doBatchState, doDeleteState, doGetState, doGetStateByPrefix, doPutState, doRequestGetBody, doRequestGetMethod, doRequestGetParam, doRequestGetPath, mkBatchedPut)
 import Safe.Coerce (coerce)
 
 newtype AppM a = AppM (StateT ContextData Aff a)

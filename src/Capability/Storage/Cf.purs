@@ -1,4 +1,4 @@
-module Capability.Storage.Cf where
+module EB.DB.Capability.Storage.Cf where
 
 import Prelude
 

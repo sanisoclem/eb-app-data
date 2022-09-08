@@ -1,4 +1,4 @@
-module FFI.DurableObject
+module EB.DB.FFI.DurableObject
   ( BatchedPut
   , DurableObjectRequest
   , DurableObjectResponse

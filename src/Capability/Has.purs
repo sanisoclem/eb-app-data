@@ -1,4 +1,4 @@
-module Capability.Has where
+module EB.DB.Capability.Has where
 
 
 -- TODO: can I make a generic instanc of this?

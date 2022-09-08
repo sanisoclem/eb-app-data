@@ -1,9 +1,7 @@
-module Capability.Storage.Transactional where
+module EB.DB.Capability.Storage.Transactional where
 
 import Prelude
 
-import Capability.Has (setter, class HasSetter)
-import Capability.Storage.Cf (class MonadCfStorage, class MonadCfStorageBatch, runBatch, tryGetState)
 import Control.Monad.Error.Class (class MonadThrow, liftEither)
 import Control.Monad.State (class MonadState, StateT, get, modify_, runStateT)
 import Control.Monad.Trans.Class (class MonadTrans, lift)
@@ -12,6 +10,8 @@ import Data.Array (elem, find, (:))
 import Data.Either (note)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
+import EB.DB.Capability.Has (setter, class HasSetter)
+import EB.DB.Capability.Storage.Cf (class MonadCfStorage, class MonadCfStorageBatch, runBatch, tryGetState)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
 import Effect.Exception (Error, error)

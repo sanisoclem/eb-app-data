@@ -1,10 +1,7 @@
-module Capability.Storage.Database where
+module EB.DB.Capability.Storage.Database where
 
 import Prelude
 
-import Capability.Storage.Cf (class MonadCfStorage, getStateByPrefix, tryGetState)
-import Capability.Storage.Transactional (class MonadTransactionalStorage, batchDeleteState, batchGetState, batchPutState, batchTryGetState)
-import Capability.Utility (convertJsonErrorToError)
 import Control.Monad.Error.Class (class MonadThrow, liftEither)
 import Data.Argonaut (Json, decodeJson, encodeJson)
 import Data.Array (delete, elem, foldl, insert, singleton, union)
@@ -14,6 +11,9 @@ import Data.FunctorWithIndex (mapWithIndex)
 import Data.Map (Map, alter, empty, foldSubmap, intersectionWith)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Traversable (sequence)
+import EB.DB.Capability.Storage.Cf (class MonadCfStorage, getStateByPrefix, tryGetState)
+import EB.DB.Capability.Storage.Transactional (class MonadTransactionalStorage, batchDeleteState, batchGetState, batchPutState, batchTryGetState)
+import EB.DB.Capability.Utility (convertJsonErrorToError)
 import Effect.Exception (Error, error)
 import Type.Prelude (Proxy(..))
 

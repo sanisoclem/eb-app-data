@@ -1,4 +1,4 @@
-module Capability.Utility where
+module EB.DB.Capability.Utility where
 
 import Prelude
 

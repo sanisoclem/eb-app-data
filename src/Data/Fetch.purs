@@ -1,12 +1,12 @@
-module Data.Fetch where
+module EB.DB.Data.Fetch where
 
 import Prelude
 
 import Data.Argonaut (class EncodeJson, Json, encodeJson, stringify)
 import Data.Argonaut.Core as A
 import Data.Tuple (Tuple(..))
+import EB.DB.FFI.DurableObject (DurableObjectResponse, doStringResponse)
 import Effect.Aff (Error)
-import FFI.DurableObject (DurableObjectResponse, doStringResponse)
 import Foreign.Object (fromFoldable)
 
 

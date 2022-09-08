@@ -1,12 +1,12 @@
-module Data.Common where
+module EB.DB.Data.Common where
 
 import Prelude
 
-import Capability.RandomId (class RandomId)
 import Data.Argonaut (class EncodeJson, class DecodeJson)
 import Data.Argonaut.Decode.Generic (genericDecodeJson)
 import Data.Argonaut.Encode.Generic (genericEncodeJson)
 import Data.Generic.Rep (class Generic)
+import EB.DB.Capability.RandomId (class RandomId)
 import Safe.Coerce (coerce)
 
 data AccountType

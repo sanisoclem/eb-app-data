@@ -1,13 +1,13 @@
-module Capability.Storage.Budget where
+module EB.DB.Capability.Storage.Budget where
 
 import Prelude
 
-import Capability.Storage.Cf (class MonadCfStorage)
-import Capability.Storage.Database (class MonadDatabase, class MonadReadonlyDatabase, putDocument, tryGetDocument, tryGetDocumentReadonly)
-import Capability.Storage.Transactional (class MonadTransactionalStorage)
 import Control.Monad.Error.Class (class MonadThrow)
-import Data.Database.Budget (BudgetDatabaseId, BudgetSummaryId(..), BudgetSummaryRecord, budgetSummaryDocument, unBudgetSummaryDocument)
 import Data.Maybe (Maybe)
+import EB.DB.Capability.Storage.Cf (class MonadCfStorage)
+import EB.DB.Capability.Storage.Database (class MonadDatabase, class MonadReadonlyDatabase, putDocument, tryGetDocument, tryGetDocumentReadonly)
+import EB.DB.Capability.Storage.Transactional (class MonadTransactionalStorage)
+import EB.DB.Data.Database.Budget (BudgetDatabaseId, BudgetSummaryId(..), BudgetSummaryRecord, budgetSummaryDocument, unBudgetSummaryDocument)
 import Effect.Exception (Error)
 
 class Monad m <= MonadBudgetReadonlyDb m where

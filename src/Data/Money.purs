@@ -1,4 +1,4 @@
-module Data.Money where
+module EB.DB.Data.Money where
 
 import Prelude
 

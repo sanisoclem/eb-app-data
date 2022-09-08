@@ -1,15 +1,15 @@
-module Data.Command.Ledger where
+module EB.DB.Data.Command.Ledger where
 
-import Capability.Fetch (class MonadFetchRequest, class MonadFromRequest, getBodyJson)
 import Control.Monad.Error.Class (class MonadThrow)
 import Data.Argonaut (class DecodeJson, class EncodeJson)
 import Data.Argonaut.Decode.Generic (genericDecodeJson)
 import Data.Argonaut.Encode.Generic (genericEncodeJson)
-import Data.Common (AccountId, AccountType, Denomination, TransactionId)
 import Data.Generic.Rep (class Generic)
-import Data.Instant (Instant)
 import Data.Maybe (Maybe)
-import Data.Money (Money)
+import EB.DB.Capability.Fetch (class MonadFetchRequest, class MonadFromRequest, getBodyJson)
+import EB.DB.Data.Common (AccountId, AccountType, Denomination, TransactionId)
+import EB.DB.Data.Instant (Instant)
+import EB.DB.Data.Money (Money)
 import Effect.Exception (Error)
 
 data LedgerCommand

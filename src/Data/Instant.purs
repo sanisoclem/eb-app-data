@@ -1,4 +1,4 @@
-module Data.Instant where
+module EB.DB.Data.Instant where
 
 import Prelude
 

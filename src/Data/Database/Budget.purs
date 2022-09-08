@@ -1,12 +1,12 @@
-module Data.Database.Budget where
+module EB.DB.Data.Database.Budget where
 
 import Prelude
 
-import Capability.Storage.Database (class DatabaseDocument, class DatabaseDocumentId, class DatabaseId, class DocumentId)
-import Capability.Utility (convertJsonErrorToError)
 import Data.Argonaut (decodeJson, encodeJson)
-import Data.Instant (Instant)
 import Data.Maybe (Maybe(..))
+import EB.DB.Capability.Storage.Database (class DatabaseDocument, class DatabaseDocumentId, class DatabaseId, class DocumentId)
+import EB.DB.Capability.Utility (convertJsonErrorToError)
+import EB.DB.Data.Instant (Instant)
 import Safe.Coerce (coerce)
 
 data BudgetDatabaseId

@@ -1,20 +1,20 @@
-module Handlers.Ledger
+module EB.DB.Handlers.Ledger
   ( handleCommand
   , handleQuery
   ) where
 
 import Prelude
 
-import Capability.Now (class MonadNow, nowUtc)
-import Capability.RandomId (generateId)
-import Capability.Storage.Ledger (class MonadLedgerDb, class MonadLedgerReadonlyDb, deleteTransaction, ensureAccountExists, getAccount, getAccountsReadonly, getBalancesReadonly, getLedger, getLedgerReadonly, getTransaction, getTransactionsReadonly, postTransaction, putAccount, putLedger, putTransaction, updateBalances)
-import Capability.Storage.Outbox (class MonadOutbox, queue)
 import Control.Monad.Error.Class (class MonadThrow)
-import Data.Command.Ledger (LedgerCommand(..))
-import Data.Event.Ledger (LedgerEvent(..))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Query.Ledger (LedgerQuery(..), LedgerQueryResult(..))
 import Data.Traversable (sequence)
+import EB.DB.Capability.Now (class MonadNow, nowUtc)
+import EB.DB.Capability.RandomId (generateId)
+import EB.DB.Capability.Storage.Ledger (class MonadLedgerDb, class MonadLedgerReadonlyDb, deleteTransaction, ensureAccountExists, getAccount, getAccountsReadonly, getBalancesReadonly, getLedger, getLedgerReadonly, getTransaction, getTransactionsReadonly, postTransaction, putAccount, putLedger, putTransaction, updateBalances)
+import EB.DB.Capability.Storage.Outbox (class MonadOutbox, queue)
+import EB.DB.Data.Command.Ledger (LedgerCommand(..))
+import EB.DB.Data.Event.Ledger (LedgerEvent(..))
+import EB.DB.Data.Query.Ledger (LedgerQuery(..), LedgerQueryResult(..))
 import Effect.Class (class MonadEffect)
 import Effect.Exception (Error)
 

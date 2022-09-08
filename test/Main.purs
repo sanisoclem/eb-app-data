@@ -2,14 +2,14 @@ module Test.Main where
 
 import Prelude
 
-import Capability.Storage.Ledger (getLedger)
 import Control.Monad.Error.Class (liftEither)
-import Data.Command.Ledger (LedgerCommand(..))
 import Data.Either (note)
+import EB.DB.Capability.Storage.Ledger (getLedger)
+import EB.DB.Data.Command.Ledger (LedgerCommand(..))
+import EB.DB.Handlers.Ledger (handleCommand)
 import Effect (Effect)
 import Effect.Aff (Aff, launchAff_)
 import Effect.Exception (error)
-import Handlers.Ledger (handleCommand)
 import Test.Spec (SpecT, describe, pending)
 import Test.Spec as Spec
 import Test.Spec.Assertions (shouldEqual)

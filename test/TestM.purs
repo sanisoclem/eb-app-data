@@ -9,20 +9,20 @@ module Test.TestM
 
 import Prelude
 
-import Capability.Has (class HasGetter, class HasSetter, getter, setter)
-import Capability.Storage.Cf (class MonadCfStorage)
-import Capability.Storage.Outbox (outboxDocumentId)
-import Capability.Storage.Transactional (class MonadTransactionalStorage)
 import Control.Monad.Error.Class (class MonadError, class MonadThrow)
 import Control.Monad.State (class MonadState, StateT, gets, modify_, runStateT)
 import Data.Argonaut (Json)
 import Data.Argonaut.Core as JSON
 import Data.Array (fromFoldable)
-import Data.Instant (Instant, mkInstant)
 import Data.Map (Map, delete, empty, filterWithKey, insert, lookup)
 import Data.Maybe (fromMaybe, isJust)
 import Data.String (Pattern(..), stripPrefix)
 import Data.Tuple (fst)
+import EB.DB.Capability.Has (class HasGetter, class HasSetter, getter, setter)
+import EB.DB.Capability.Storage.Cf (class MonadCfStorage)
+import EB.DB.Capability.Storage.Outbox (outboxDocumentId)
+import EB.DB.Capability.Storage.Transactional (class MonadTransactionalStorage)
+import EB.DB.Data.Instant (Instant, mkInstant)
 import Effect.Aff (Aff, Error)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)

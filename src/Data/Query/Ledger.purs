@@ -1,19 +1,19 @@
-module Data.Query.Ledger where
+module EB.DB.Data.Query.Ledger where
 
 import Prelude
 
-import Capability.Fetch (class MonadFetchRequest, class MonadFromRequest, getPath, tryGetParamNumber)
 import Control.Bind (bindFlipped)
 import Control.Monad.Error.Class (class MonadThrow, throwError)
 import Data.Argonaut (class DecodeJson, class EncodeJson)
 import Data.Argonaut.Decode.Generic (genericDecodeJson)
 import Data.Argonaut.Encode.Generic (genericEncodeJson)
-import Data.Common (AccountId, AccountType, Denomination, TransactionId)
 import Data.Generic.Rep (class Generic)
-import Data.Instant (Instant, mkInstant)
 import Data.Map (Map)
 import Data.Maybe (Maybe)
-import Data.Money (Money)
+import EB.DB.Capability.Fetch (class MonadFetchRequest, class MonadFromRequest, getPath, tryGetParamNumber)
+import EB.DB.Data.Common (AccountId, AccountType, Denomination, TransactionId)
+import EB.DB.Data.Instant (Instant, mkInstant)
+import EB.DB.Data.Money (Money)
 import Effect.Exception (Error, error)
 
 

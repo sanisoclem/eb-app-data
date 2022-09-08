@@ -1,8 +1,8 @@
-module Capability.Now where
+module EB.DB.Capability.Now where
 
 import Prelude
 
-import Data.Instant (Instant, now)
+import EB.DB.Data.Instant (Instant, now)
 import Effect.Class (class MonadEffect)
 
 class Monad m <= MonadNow m where

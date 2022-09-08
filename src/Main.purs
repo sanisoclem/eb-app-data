@@ -1,16 +1,16 @@
-module EbAppData.Main where
+module EB.DB.Main where
 
 import Prelude
 
-import EbAppData.AppM (AppM, runAppM, mkContext)
-import Capability.Fetch (fromRequest, getRequestMethod)
-import Capability.Storage.Transactional (batchOperation)
 import Control.Monad.Error.Class (catchError)
 import Control.Promise (Promise, fromAff)
-import Data.Fetch (RequestMethod(..), Response, errorResponse, jsonResponse, messageResponse, notFoundResponse, toDurableObjectResponse)
+import EB.DB.AppM (AppM, runAppM, mkContext)
+import EB.DB.Capability.Fetch (fromRequest, getRequestMethod)
+import EB.DB.Capability.Storage.Transactional (batchOperation)
+import EB.DB.Data.Fetch (RequestMethod(..), Response, errorResponse, jsonResponse, messageResponse, notFoundResponse, toDurableObjectResponse)
+import EB.DB.FFI.DurableObject (DurableObjectRequest, DurableObjectResponse, DurableObjectState)
+import EB.DB.Handlers.Ledger (handleCommand, handleQuery)
 import Effect (Effect)
-import FFI.DurableObject (DurableObjectRequest, DurableObjectResponse, DurableObjectState)
-import Handlers.Ledger (handleCommand, handleQuery)
 
 toResponse :: AppM Response -> AppM DurableObjectResponse
 toResponse x = toDurableObjectResponse <$> catchError x (pure <<< errorResponse)

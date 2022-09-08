@@ -1,17 +1,17 @@
-module Capability.Fetch where
+module EB.DB.Capability.Fetch where
 
 import Prelude
 
-import Capability.Utility (convertJsonErrorToError)
 import Control.Bind (bindFlipped)
 import Control.Monad.Error.Class (class MonadThrow, liftEither)
 import Data.Argonaut (class DecodeJson, decodeJson, jsonParser)
 import Data.Bifunctor (lmap)
 import Data.Either (note)
-import Data.Fetch (RequestMethod)
 import Data.Int as Int
 import Data.Maybe (Maybe)
 import Data.Number as Number
+import EB.DB.Capability.Utility (convertJsonErrorToError)
+import EB.DB.Data.Fetch (RequestMethod)
 import Effect.Exception (Error, error)
 
 class Monad m <= MonadFetchRequest m where

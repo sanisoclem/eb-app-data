@@ -1,17 +1,17 @@
-module Data.Database.Ledger  where
+module EB.DB.Data.Database.Ledger  where
 
 import Prelude
 
-import Capability.Storage.Database (class DatabaseDocument, class DatabaseDocumentId, class DatabaseId, class DatabaseIndex, class DocumentCollection, class DocumentId, class IndexedDocument, getIdPrefix)
-import Capability.Utility (convertJsonErrorToError)
 import Control.Alternative ((<|>))
 import Data.Argonaut (decodeJson, encodeJson)
-import Data.Common (AccountId, AccountType, BalanceId, Denomination, LedgerId, TransactionId, accountId, balanceId, ledgerId, transactionId, unAccountId, unTransactionId)
-import Data.Instant (Instant, unInstant)
 import Data.Map (Map, empty, singleton)
 import Data.Maybe (Maybe(..))
-import Data.Money (Money, zeroMoney)
 import Data.String (Pattern(..), stripPrefix)
+import EB.DB.Capability.Storage.Database (class DatabaseDocument, class DatabaseDocumentId, class DatabaseId, class DatabaseIndex, class DocumentCollection, class DocumentId, class IndexedDocument, getIdPrefix)
+import EB.DB.Capability.Utility (convertJsonErrorToError)
+import EB.DB.Data.Common (AccountId, AccountType, BalanceId, Denomination, LedgerId, TransactionId, accountId, balanceId, ledgerId, transactionId, unAccountId, unTransactionId)
+import EB.DB.Data.Instant (Instant, unInstant)
+import EB.DB.Data.Money (Money, zeroMoney)
 import Safe.Coerce (coerce)
 import Type.Prelude (Proxy(..))
 

@@ -1,4 +1,4 @@
-module Capability.RandomId where
+module EB.DB.Capability.RandomId where
 
 import Prelude
 
