@@ -4,10 +4,10 @@ module EB.DB.FFI.DurableObject
   , DurableObjectResponse
   , DurableObjectState
   , doBatchState
-  , doDeleteState
-  , doGetState
-  , doGetStateByPrefix
-  , doPutState
+  , dodeleteDurableState
+  , dogetDurableState
+  , dogetDurableStateByPrefix
+  , doputDurableState
   , doRequestGetBody
   , doRequestGetMethod
   , doRequestGetParam
@@ -55,28 +55,28 @@ doRequestGetParam = doRequestGetParamImpl Just Nothing
 doRequestGetBody :: DurableObjectRequest -> Aff String
 doRequestGetBody = doRequestGetBodyImpl >>> toAffE
 
-doGetStateByPrefix :: DurableObjectState -> String -> Aff (Map String Json)
-doGetStateByPrefix state prefix = do
-  items <- toAffE <<< doGetStateByPrefixImpl state $ prefix
+dogetDurableStateByPrefix :: DurableObjectState -> String -> Aff (Map String Json)
+dogetDurableStateByPrefix state prefix = do
+  items <- toAffE <<< dogetDurableStateByPrefixImpl state $ prefix
   pure $ Map.fromFoldable $ (\r -> Tuple r.key r.value) <$> items
 
-doGetState :: DurableObjectState -> String -> Aff (Maybe Json)
-doGetState state = doGetStateImpl Just Nothing state >>> toAffE
+dogetDurableState :: DurableObjectState -> String -> Aff (Maybe Json)
+dogetDurableState state = dogetDurableStateImpl Just Nothing state >>> toAffE
 
-doPutState :: DurableObjectState -> String -> Json -> Aff Unit
-doPutState state key = doPutStateImpl state key >>> toAffE
+doputDurableState :: DurableObjectState -> String -> Json -> Aff Unit
+doputDurableState state key = doputDurableStateImpl state key >>> toAffE
 
-doDeleteState :: DurableObjectState -> String -> Aff Unit
-doDeleteState state = doDeleteStateImpl state >>> toAffE
+dodeleteDurableState :: DurableObjectState -> String -> Aff Unit
+dodeleteDurableState state = dodeleteDurableStateImpl state >>> toAffE
 
 doBatchState :: ∀ f f'. Foldable f => Foldable f' => DurableObjectState -> f BatchedPut -> f' String -> Aff Unit
 doBatchState state puts deletes = toAffE $ doBatchStateImpl state (fromFoldable deletes) (fromFoldable puts)
 
 -- private
 foreign import doRequestGetBodyImpl :: DurableObjectRequest -> Effect (Promise String)
-foreign import doGetStateByPrefixImpl :: DurableObjectState -> String -> Effect (Promise (Array { key :: String, value :: Json}))
-foreign import doGetStateImpl :: (∀ a. a -> Maybe a) -> (∀ a. Maybe a) -> DurableObjectState -> String -> Effect (Promise (Maybe Json))
-foreign import doPutStateImpl :: DurableObjectState -> String -> Json -> Effect (Promise Unit)
-foreign import doDeleteStateImpl :: DurableObjectState -> String -> Effect (Promise Unit)
+foreign import dogetDurableStateByPrefixImpl :: DurableObjectState -> String -> Effect (Promise (Array { key :: String, value :: Json}))
+foreign import dogetDurableStateImpl :: (∀ a. a -> Maybe a) -> (∀ a. Maybe a) -> DurableObjectState -> String -> Effect (Promise (Maybe Json))
+foreign import doputDurableStateImpl :: DurableObjectState -> String -> Json -> Effect (Promise Unit)
+foreign import dodeleteDurableStateImpl :: DurableObjectState -> String -> Effect (Promise Unit)
 foreign import doBatchStateImpl :: DurableObjectState -> Array String -> Array BatchedPut -> Effect (Promise Unit)
 foreign import doRequestGetParamImpl :: (∀ a. a -> Maybe a) -> (∀ a. Maybe a) -> DurableObjectRequest -> String -> Maybe String

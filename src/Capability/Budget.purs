@@ -1,4 +1,4 @@
-module EB.DB.Capability.Storage.Budget where
+module EB.DB.Capability.Budget where
 
 import Prelude
 

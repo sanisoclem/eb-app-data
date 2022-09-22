@@ -3,18 +3,21 @@ module EB.DB.AppM where
 import Prelude
 
 import Control.Monad.Error.Class (class MonadError, class MonadThrow)
-import Control.Monad.State (class MonadState, StateT, gets, runStateT)
+import Control.Monad.State (class MonadState, StateT, runStateT)
 import Data.Array (fromFoldable)
+import Data.Lens (Iso', iso)
+import Data.Lens.Record (prop)
 import Data.Tuple (fst)
 import EB.DB.Capability.Fetch (class MonadFetchRequest)
-import EB.DB.Capability.Has (class HasGetter, getter)
+import EB.DB.Capability.Has (class HasLens, getState)
 import EB.DB.Capability.Storage.Cf (class MonadCfStorage, class MonadCfStorageBatch)
 import EB.DB.Data.Fetch (RequestMethod(..))
-import EB.DB.FFI.DurableObject (DurableObjectRequest, DurableObjectState, doBatchState, doDeleteState, doGetState, doGetStateByPrefix, doPutState, doRequestGetBody, doRequestGetMethod, doRequestGetParam, doRequestGetPath, mkBatchedPut)
+import EB.DB.FFI.DurableObject (DurableObjectRequest, DurableObjectState, doBatchState, dodeleteDurableState, dogetDurableState, dogetDurableStateByPrefix, doputDurableState, doRequestGetBody, doRequestGetMethod, doRequestGetParam, doRequestGetPath, mkBatchedPut)
 import Effect.Aff (Aff, Error)
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Class (class MonadEffect)
 import Safe.Coerce (coerce)
+import Type.Prelude (Proxy(..))
 
 newtype AppM a = AppM (StateT ContextData Aff a)
 
@@ -33,27 +36,27 @@ derive newtype instance monadAffAppM :: MonadAff AppM
 derive newtype instance monadAskAppM :: MonadState ContextData AppM
 
 instance MonadCfStorage AppM where
-  tryGetState key = do
-    state <- gets getter
-    liftAff $ doGetState state key
-  putState key value = do
-    state <- gets getter
-    liftAff <<< doPutState state key $ value
-  deleteState key = liftAff <<< (flip doDeleteState) key =<< gets getter
-  getStateByPrefix prefix = do
-    state <- gets getter
-    resultMap <- liftAff <<< doGetStateByPrefix state $ prefix
+  tryGetDurableState key = do
+    state <- getState
+    liftAff $ dogetDurableState state key
+  putDurableState key value = do
+    state <- getState
+    liftAff <<< doputDurableState state key $ value
+  deleteDurableState key = liftAff <<< (flip dodeleteDurableState) key =<< getState
+  getDurableStateByPrefix prefix = do
+    state <- getState
+    resultMap <- liftAff <<< dogetDurableStateByPrefix state $ prefix
     pure $ fromFoldable resultMap
 
 instance MonadCfStorageBatch AppM where
   runBatch batch = do
     let puts = (mkBatchedPut <$> _.docId <*> _.body) <$> batch.puts
-    state <- gets getter
+    state <- getState
     liftAff $ doBatchState state puts batch.deletes
 
 instance MonadFetchRequest AppM where
   getRequestMethod = do
-    request <- gets getter
+    request <- getState
     pure $ case doRequestGetMethod request of
       "POST" -> POST
       "GET" -> GET
@@ -61,13 +64,13 @@ instance MonadFetchRequest AppM where
       "PUT" -> PUT
       x -> Unknown x
   getBodyString = do
-    request <- gets getter
+    request <- getState
     liftAff <<< doRequestGetBody $ request
   getPath = do
-    req <- gets getter
+    req <- getState
     pure $ doRequestGetPath req
   tryGetParam key = do
-    req <- gets getter
+    req <- getState
     pure $ doRequestGetParam req key
 
 data ContextData = ContextData
@@ -82,8 +85,11 @@ mkContext durableObjectState durableObjectRequest =
     , durableObjectState
     }
 
-instance hasContextState :: HasGetter DurableObjectState ContextData  where
-  getter (ContextData x) = x.durableObjectState
+_ContextData :: Iso' ContextData { durableObjectRequest :: DurableObjectRequest, durableObjectState :: DurableObjectState }
+_ContextData = iso (case _ of ContextData x -> x) ContextData
 
-instance hasContextRequest :: HasGetter DurableObjectRequest ContextData  where
-  getter (ContextData x) = x.durableObjectRequest
+instance hasContextState :: HasLens ContextData DurableObjectState  where
+  focus = _ContextData <<< prop (Proxy :: Proxy "durableObjectState")
+
+instance hasContextRequest :: HasLens ContextData DurableObjectRequest where
+  focus = _ContextData <<<  prop (Proxy :: Proxy "durableObjectRequest")

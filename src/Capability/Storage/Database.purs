@@ -11,9 +11,9 @@ import Data.FunctorWithIndex (mapWithIndex)
 import Data.Map (Map, alter, empty, foldSubmap, intersectionWith)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Traversable (sequence)
-import EB.DB.Capability.Storage.Cf (class MonadCfStorage, getStateByPrefix, tryGetState)
-import EB.DB.Capability.Storage.Transactional (class MonadTransactionalStorage, batchDeleteState, batchGetState, batchPutState, batchTryGetState)
-import EB.DB.Capability.Utility (convertJsonErrorToError)
+import EB.DB.Capability.Storage.Cf (class MonadCfStorage, getDurableStateByPrefix, tryGetDurableState)
+import EB.DB.Capability.Storage.Transactional (class MonadTransactionalStorage, batchdeleteDurableState, batchgetDurableState, batchputDurableState, batchtryGetDurableState)
+import EB.DB.Data.Utility (convertJsonErrorToError)
 import Effect.Exception (Error, error)
 import Type.Prelude (Proxy(..))
 
@@ -168,7 +168,7 @@ getFullDbStringId dbId = "d/" <> dbIdString dbId
 instance (MonadCfStorage m, MonadThrow Error m, DatabaseId dbId) => MonadReadonlyDatabase dbId m where
   tryGetDocumentReadonly id = do
     let (dbId :: dbId) =  wrapDocumentId id
-    jsonState <- tryGetState <<< getFullDbStringId $ dbId
+    jsonState <- tryGetDurableState <<< getFullDbStringId $ dbId
     sequence $ (liftEither <<< decodeDocument) <$> jsonState
   getCollection ::
     forall doc docId
@@ -179,24 +179,24 @@ instance (MonadCfStorage m, MonadThrow Error m, DatabaseId dbId) => MonadReadonl
     => m (Array doc)
   getCollection = do
     let prefix = "d/" <> getIdPrefix (Proxy :: Proxy doc)
-    jsons <- getStateByPrefix prefix
+    jsons <- getDurableStateByPrefix prefix
     sequence $ (liftEither <<< decodeDocument) <$> jsons
 
 instance (MonadTransactionalStorage m, MonadThrow Error m, DatabaseId dbId) => MonadDatabase dbId m where
   tryGetDocument id = do
     let (dbId :: dbId) =  wrapDocumentId id
-    jsonState <- batchTryGetState <<< getFullDbStringId $ dbId
+    jsonState <- batchtryGetDurableState <<< getFullDbStringId $ dbId
     sequence $ (liftEither <<< decodeDocument) <$> jsonState
   putDocument docId doc = do
     let (dbId :: dbId) = wrapDocumentId docId
-    batchPutState (getFullDbStringId dbId) $ encodeDocument doc
+    batchputDurableState (getFullDbStringId dbId) $ encodeDocument doc
   deleteDocument docId = do
     let (dbId :: dbId) = wrapDocumentId docId
-    batchDeleteState $ getFullDbStringId dbId
+    batchdeleteDurableState $ getFullDbStringId dbId
 
 instance (MonadCfStorage m, MonadThrow Error m, DatabaseId dbId, DatabaseIndex idx, MonadReadonlyDatabase dbId m) => MonadReadonlyIndexedDatabase dbId idx m where
   getFromRangeIndexReadonly index min max = do
-    json <- tryGetState $ getFullIndexId index
+    json <- tryGetDurableState $ getFullIndexId index
     (indexDoc :: RangeIndexDocument) <- fromMaybe (pure empty) $ (liftEither <<< convertJsonErrorToError <<< decodeJson) <$> json
     let (ids :: Array String) = foldSubmap min max (\_k v -> v) indexDoc
     let (dbIds :: Array dbId) = filterMap dbIdFromString ids
@@ -206,7 +206,7 @@ instance (MonadCfStorage m, MonadThrow Error m, DatabaseId dbId, DatabaseIndex i
 instance (MonadTransactionalStorage m, MonadThrow Error m, DatabaseId dbId, DatabaseIndex idx, MonadDatabase dbId m) => MonadIndexedDatabase dbId idx m where
   getFromRangeIndex :: forall doc docId. DatabaseDocument doc => DatabaseDocumentId dbId docId => DocumentId doc docId => idx -> Maybe Number -> Maybe Number -> m (Array doc)
   getFromRangeIndex index min max = do
-    (indexDoc :: RangeIndexDocument) <- liftEither <=< map (convertJsonErrorToError <<< decodeJson) <<< batchGetState $ getFullIndexId index
+    (indexDoc :: RangeIndexDocument) <- liftEither <=< map (convertJsonErrorToError <<< decodeJson) <<< batchgetDurableState $ getFullIndexId index
     let (ids :: Array String) = foldSubmap min max (\_k v -> v) indexDoc
     let (dbIds :: Array dbId) = filterMap dbIdFromString ids
     let (docIds :: Array docId) = filterMap tryUnwrapDocumentId dbIds
@@ -230,11 +230,11 @@ instance (MonadTransactionalStorage m, MonadThrow Error m, DatabaseId dbId, Data
         updateIndex :: String -> idx -> Array { delete :: Boolean, value :: Number } -> m Unit
         updateIndex docId idx updates = do
           let indexId = getFullIndexId idx
-          maybState <- batchTryGetState $ indexId
+          maybState <- batchtryGetDurableState $ indexId
           (maybIndexDoc :: Maybe RangeIndexDocument) <- sequence $ (liftEither <<< convertJsonErrorToError <<< decodeJson) <$> maybState
           let indexDoc = fromMaybe empty maybIndexDoc
           let updatedDoc = foldl (applyUpdates docId) indexDoc updates
-          batchPutState indexId (encodeJson updatedDoc)
+          batchputDurableState indexId (encodeJson updatedDoc)
         applyUpdates docId index = case _ of
           { delete: true, value: x } -> alter (removeAndDeleteIfEmpty docId) x index
           { delete: false, value: x } -> alter (insertOrUpdate docId) x index
@@ -258,9 +258,9 @@ instance (MonadTransactionalStorage m, MonadThrow Error m, DatabaseId dbId, Data
           where
             removeFromIndex idToRemove idx v = do
               let indexId = getFullIndexId idx
-              (indexDoc :: RangeIndexDocument) <- liftEither <=< map (convertJsonErrorToError <<< decodeJson) <<< batchGetState $ indexId
+              (indexDoc :: RangeIndexDocument) <- liftEither <=< map (convertJsonErrorToError <<< decodeJson) <<< batchgetDurableState $ indexId
               let updatedDoc = alter (removeAndDeleteIfEmpty idToRemove) v indexDoc
-              batchPutState indexId (encodeJson updatedDoc)
+              batchputDurableState indexId (encodeJson updatedDoc)
             removeAndDeleteIfEmpty id = case _ of
               Nothing -> Nothing
               Just [x] | eq id x -> Nothing

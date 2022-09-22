@@ -10,7 +10,7 @@ import Data.Either (note)
 import Data.Int as Int
 import Data.Maybe (Maybe)
 import Data.Number as Number
-import EB.DB.Capability.Utility (convertJsonErrorToError)
+import EB.DB.Data.Utility (convertJsonErrorToError)
 import EB.DB.Data.Fetch (RequestMethod)
 import Effect.Exception (Error, error)
 
