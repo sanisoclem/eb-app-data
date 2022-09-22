@@ -5,7 +5,7 @@ import Prelude
 import Data.Argonaut (decodeJson, encodeJson)
 import Data.Maybe (Maybe(..))
 import EB.DB.Capability.Storage.Database (class DatabaseDocument, class DatabaseDocumentId, class DatabaseId, class DocumentId)
-import EB.DB.Capability.Utility (convertJsonErrorToError)
+import EB.DB.Data.Utility (convertJsonErrorToError)
 import EB.DB.Data.Instant (Instant)
 import Safe.Coerce (coerce)
 

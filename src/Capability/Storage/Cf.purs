@@ -9,14 +9,13 @@ import Data.Maybe (Maybe)
 import Effect.Exception (Error, error)
 
 class Monad m <= MonadCfStorage m where
-  tryGetState :: String -> m (Maybe Json)
-  putState :: String -> Json -> m Unit
-  deleteState :: String -> m Unit
-  getStateByPrefix :: String -> m (Array Json)
+  tryGetDurableState :: String -> m (Maybe Json)
+  putDurableState :: String -> Json -> m Unit
+  deleteDurableState :: String -> m Unit
+  getDurableStateByPrefix :: String -> m (Array Json)
 
 class Monad m <= MonadCfStorageBatch m where
   runBatch :: { puts:: Array { docId :: String, body :: Json }, deletes :: Array String } -> m Unit
 
-
-getState :: forall m. MonadThrow Error m => MonadCfStorage m => String -> m Json
-getState = liftEither <<< note (error "state not found") <=< tryGetState
+getDurableState :: forall m. MonadThrow Error m => MonadCfStorage m => String -> m Json
+getDurableState = liftEither <<< note (error "state not found") <=< tryGetDurableState

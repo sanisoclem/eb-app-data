@@ -1,4 +1,4 @@
-module EB.DB.Capability.Storage.Ledger where
+module EB.DB.Capability.Ledger where
 
 import Prelude
 
@@ -9,7 +9,7 @@ import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
 import EB.DB.Capability.Storage.Cf (class MonadCfStorage)
 import EB.DB.Capability.Storage.Database (class MonadDatabase, class MonadIndexedDatabase, class MonadReadonlyDatabase, class MonadReadonlyIndexedDatabase, deleteIndexedDocument, getCollection, getDocument, getDocumentReadonly, getFromRangeIndexReadonly, putDocument, putIndexedDocument, tryGetDocument, tryGetDocumentReadonly)
 import EB.DB.Capability.Storage.Transactional (class MonadTransactionalStorage)
-import EB.DB.Capability.Utility (ensure)
+import EB.DB.Data.Utility (ensure)
 import EB.DB.Data.Common (AccountId, TransactionId, balanceId, ledgerId, unAccountId)
 import EB.DB.Data.Database.Ledger (AccountDocument, AccountDocumentRecord, LedgerBalanceDocumentRecord, LedgerDatabaseId, LedgerDocumentRecord, LedgerIndexes(..), TransactionDocument, TransactionDocumentRecord, accountDocument, emptyBalance, ledgerBalanceDocument, ledgerDocument, transactionDocument, unAccountDocument, unLedgerBalanceDocument, unLedgerDocument, unTransactionDocument)
 import EB.DB.Data.Instant (Instant, unInstant)

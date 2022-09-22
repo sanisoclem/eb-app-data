@@ -4,7 +4,7 @@ import Prelude
 
 import Control.Monad.Error.Class (liftEither)
 import Data.Either (note)
-import EB.DB.Capability.Storage.Ledger (getLedger)
+import EB.DB.Capability.Ledger (getLedger)
 import EB.DB.Data.Command.Ledger (LedgerCommand(..))
 import EB.DB.Handlers.Ledger (handleCommand)
 import Effect (Effect)

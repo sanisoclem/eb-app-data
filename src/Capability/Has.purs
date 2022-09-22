@@ -1,10 +1,19 @@
 module EB.DB.Capability.Has where
 
+import Prelude
 
--- TODO: can I make a generic instanc of this?
--- since you can't create instances for records, this becomes less useful
-class HasGetter a b where
-  getter :: b -> a
+import Control.Monad.State (class MonadState, gets, modify, modify_)
+import Data.Lens (Lens', over, view)
 
-class HasSetter a b where
-  setter :: (a -> a) -> b -> b
+
+class HasLens s a where
+  focus :: Lens' s a
+
+getState :: forall m s a. MonadState s m => HasLens s a => m a
+getState = gets (view focus)
+
+modifyState :: forall m s a. MonadState s m => HasLens s a => (a -> a) -> m a
+modifyState fn = view focus <$> modify (over focus fn)
+
+modifyState_ :: forall m s a. MonadState s m => HasLens s a => (a -> a) -> m Unit
+modifyState_ fn = modify_ (over focus fn)

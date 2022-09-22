@@ -12,19 +12,19 @@ export const doRequestGetParamImpl = justFn => nothing => req => key => {
 }
 
 export const doRequestGetBodyImpl = (req) => () => req.text();
-export const doGetStateImpl = justFn => nothing => state => key => async () => {
+export const dogetDurableStateImpl = justFn => nothing => state => key => async () => {
   const r = await state.get(key);
   //throw new Error(`Key: ${key} bpdy: ${JSON.stringify(r)}`)
   if (r === undefined) return nothing;
   return justFn(r);
 }
-export const doGetStateByPrefixImpl = state => prefix => async () => {
+export const dogetDurableStateByPrefixImpl = state => prefix => async () => {
   var ret = await state.list({ prefix });
   //throw new Error(`Key: ${prefix} bpdy: ${JSON.stringify(Array.from(ret.entries()).map(([k,v]) => ({ key: k, value: v })))}`)
   return Array.from(ret.entries()).map(([k,v]) => ({ key: k, value: v }));
 }
-export const doPutStateImpl = state => key => value => () => state.put(key, value);
-export const doDeleteStateImpl = state => key => () => state.delete(key);
+export const doputDurableStateImpl = state => key => value => () => state.put(key, value);
+export const dodeleteDurableStateImpl = state => key => () => state.delete(key);
 export const doBatchStateImpl = state => deletes => puts => async () => {
   let lastPromise = null;
   if (deletes.length)
